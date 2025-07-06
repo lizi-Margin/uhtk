@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+*.so
+*.pyd
+
+/VISUALIZE_logdir
+/build
+/.cache
+/.vscode
+/.marscode
