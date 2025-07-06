@@ -2,6 +2,8 @@ UHTK - Universal Hulc ToolKit
 
 Things needed:
 1. 3dutils
-2. Python log fmt tools and mcv_log_manager.py
-3. C++ rubish can
-4. RNN based policy and transformer based policy
+2. siri utils (including lprint) and mcv_log_manager.py
+3. vision preprocess tools
+4. zh_font
+5. C++ rubish can
+6. RNN based policy and transformer based policy
