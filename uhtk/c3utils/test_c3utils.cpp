@@ -122,7 +122,9 @@ int main() {
     std::cout << "module 2d " << make_vector2(v_2).get_module() << std::endl;
     auto res_angle3 = v_2.get_rotate_angle_fix();
     std::cout << "get rotate angel " << res_angle3[0] / EIGEN_PI * 180 << " " << res_angle3[1] / EIGEN_PI * 180 << " " << res_angle3[2] / EIGEN_PI * 180 << std::endl;
+#ifndef FOR_PYTHON
     std::cout << "Rotate Vector: " << Vector3(1, 0, 0).prod(v_2.get_module()).rotate_xyz_fix(res_angle3) << std::endl;
+#endif //FOR_PYTHON
 
     c3u::Vector3 test_get_v(1, 2, 3);
     c3u::Vector3 test_set_v(3, 2, 1);

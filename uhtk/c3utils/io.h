@@ -32,13 +32,21 @@ namespace c3utils {
 	inline std::string _lprint_core(const std::string& who, const std::string& content) noexcept
 	{
 		std::string buff; buff.reserve(LOG_LEFT_BRACKET_LEN + who.size() + LOG_RIGHT_BRACKET_LEN + 2 + content.size());
-		buff.append(LOG_LEFT_BRACKET).append(who).append(LOG_RIGHT_BRACKET).append(" ");
-		buff.append(content);
+		buff.append(LOG_LEFT_BRACKET);
+		if (who.empty())
+		{
+			buff.append("UNKNOWN");
+		} else {
+			buff.append(who);
+		}
+		buff.append(LOG_RIGHT_BRACKET).append(" ");
+
 		if (content.empty()) 
 		{
-			buff.append("[lprint_] NO_CONTENT");
-		} 
-
+			buff.append("NO_CONTENT");
+		} else {
+			buff.append(content);
+		}
 		buff.append("\n");
 		return buff;
 	}

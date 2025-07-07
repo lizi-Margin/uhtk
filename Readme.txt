@@ -6,4 +6,5 @@ Things needed:
 3. vision preprocess tools
 4. zh_font
 5. C++ rubish can
-6. RNN based policy and transformer based policy
+6. C++ csv_drawer
+7. RNN based policy and transformer based policy
