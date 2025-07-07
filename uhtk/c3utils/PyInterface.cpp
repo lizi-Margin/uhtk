@@ -36,6 +36,7 @@ PYBIND11_MODULE(py_c3utils, m) {
 			}
 		);
 
+#ifdef FOR_PYTHON
 	// Vector3 binding
 	py::class_<c3u::Vector3>(m, "Vector3")
 		.def(py::init<c3u::float64_t, c3u::float64_t, c3u::float64_t>())
@@ -114,6 +115,7 @@ PYBIND11_MODULE(py_c3utils, m) {
 		//	}, 
 		//	py::keep_alive<0, 1>()
 		//);
+#endif //FOR_PYTHON
 
 	// Functions binding
 	//m.def("norm", &c3u::norm, py::arg("x"), py::arg("lower_side") = -1.0, py::arg("upper_side") = 1.0);
