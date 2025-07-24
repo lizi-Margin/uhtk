@@ -1,3 +1,5 @@
+Copyright (c) 2025 shc
+
 本软件及其相关代码以MIT协议开源，作者不对软件具备任何控制力，使用软件者、传播软件导出的声音者自负全责。
 如不认可该条款，则不能使用或引用软件包内任何代码和文件。
 
@@ -9,5 +11,6 @@
 本软件引用了以下项目的代码：
 HMAP: Hybrid Multi-Agent Playground
 许可证: MIT License
+Copyright (c) 2020 binary-husky
 代码位于`/UTIL`、`/VISUALIZE`目录，来源：[https://github.com/binary-husky/hmp2g]
 

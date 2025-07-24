@@ -181,10 +181,10 @@ int main() {
         print(v3_arr[0], v3_arr[1], v3_arr[2]);
         print(c3u::Vector3(v3_arr));
         print(c3u::Vector3(v3_arr).repr());
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::microseconds(500 * 1000));
     }
 
 
-    system("pause");
+    //system("pause");
     return 0;
 }
