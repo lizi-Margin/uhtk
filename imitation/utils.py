@@ -6,6 +6,9 @@ from uhtk.UTIL.colorful import *
 from uhtk.siri.utils.lprint import lprint, lprint_
 from uhtk.siri.utils.iterable_eq import iterable_eq
 
+import platform
+IS_WINDOWS = (platform.system() == 'Windows')
+
 class cfg:
     logdir = './HMP_IL/'
 
@@ -167,7 +170,10 @@ def safe_load(obj, path):
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
     if traj_dir is None:
-        traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H:%M:%S')}/"
+        if IS_WINDOWS:
+            traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H#%M#%S')}/"
+        else:
+            traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H:%M:%S')}/"
     
     for index, traj in enumerate(traj_pool):
         traj_name = f"traj-{pool_name}-{index}.d"
