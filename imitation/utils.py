@@ -10,7 +10,7 @@ import platform
 IS_WINDOWS = (platform.system() == 'Windows')
 
 class cfg:
-    logdir = './HMP_IL/'
+    logdir = 'G:/HMP_IL/'
 
 def is_basic_type(obj):
     if (

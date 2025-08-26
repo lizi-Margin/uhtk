@@ -53,12 +53,20 @@ KEY_INPUTS = [
     'j', 'k', 'l', 
     't', 'y',      
     'v', 'b', 'm', 
-    'shift_l',  
+    'shift_l', 'caps_lock', 'tab',
+    'z', 'x',
 ]
+
 MOUSE_BUTTONS = {
+    # --- SIRI Standard ---
     mouse.Button.left:   'mouse_left',
     mouse.Button.right:  'mouse_right',
-    mouse.Button.middle: 'mouse_middle', 
+
+    # --- Ext 250826 ---
+    mouse.Button.middle: 'mouse_middle',
+    mouse.Button.x1: 'mouse_x1',
+    mouse.Button.x2: 'mouse_x2',
+    'dy': 'dy',
 }
 
 
@@ -74,8 +82,8 @@ start = 0
 stop = 0
 human = 0
 ENABLE_HUMAN = False
-start_char = 'z'
-stop_char = 'x'
+start_char = '='
+stop_char = '-'
 human_char = 'l_shift'
 
 def on_key_press(key):
@@ -86,6 +94,10 @@ def on_key_press(key):
             human = int(not human)
         else:
             actions['shift_l'] = 1
+    elif key == Key.caps_lock:
+        actions['caps_lock'] = 1
+    elif key == Key.tab:
+        actions['tab'] = 1
     elif hasattr(key, 'char'):
         if key.char in actions:
             actions[key.char] = 1
@@ -101,6 +113,10 @@ def on_key_release(key):
         global ENABLE_HUMAN
         if not ENABLE_HUMAN:
             actions['shift_l'] = 0
+    elif key == Key.caps_lock:
+        actions['caps_lock'] = 0
+    elif key == Key.tab:
+        actions['tab'] = 0
     elif hasattr(key, 'char') and key.char in actions:
         actions[key.char] = 0
 
@@ -123,6 +139,13 @@ def on_mouse_release(x, y, button, _):
     # if button in MOUSE_BUTTONS:
     #    actions[MOUSE_BUTTONS[button]] = 0
 
+def on_scroll(x, y, dx, dy):
+    actions[MOUSE_BUTTONS['dy']] = dy
+
+def get_listeners():
+    keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
+    mouse_listener = mouse.Listener(on_move=on_mouse_move, on_click=on_mouse_press, on_release=on_mouse_release, on_scroll=on_scroll)
+    return keyboard_listener, mouse_listener
 
 class ILGrabber(ScrGrabber):
     def __init__(self, **kwargs):
@@ -156,8 +179,7 @@ class ILGrabber(ScrGrabber):
         
 
         # Initialize listeners
-        self.keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
-        self.mouse_listener = mouse.Listener(on_move=on_mouse_move, on_click=on_mouse_press, on_release=on_mouse_release)
+        self.keyboard_listener, self.mouse_listener = get_listeners()
         self.keyboard_listener.start()
         self.mouse_listener.start()
 
@@ -230,10 +252,13 @@ class ILGrabber(ScrGrabber):
                         mouse_movement = np.array([0., 0.], dtype=np.float32)
                         lprint(self, "Warning: new_mouse_pos is None")
                     act = np.array(list(actions.values()), dtype=np.float32)
+                    
                     # if act.any():
                     #     print(actions)
                     if np.max(np.abs(mouse_movement), axis=None) > 50:
                         print(mouse_movement, last_mouse_pos)
+
+                    actions[MOUSE_BUTTONS['dy']] = 0
                     traj.remember('key', act)
                     traj.remember('mouse', mouse_movement.copy())
                     traj.time_shift()
@@ -303,8 +328,7 @@ class RLGrabber(ILGrabber):
         
 
         # Initialize listeners
-        self.keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
-        self.mouse_listener = mouse.Listener(on_move=on_mouse_move, on_click=on_mouse_press, on_release=on_mouse_release)
+        self.keyboard_listener, self.mouse_listener = get_listeners()
         self.keyboard_listener.start()
         self.mouse_listener.start()
 
@@ -422,8 +446,7 @@ class DAggrGrabber(RLGrabber):
         
 
         # Initialize listeners
-        self.keyboard_listener = keyboard.Listener(on_press=on_key_press, on_release=on_key_release)
-        self.mouse_listener = mouse.Listener(on_move=on_mouse_move, on_click=on_mouse_press, on_release=on_mouse_release)
+        self.keyboard_listener, self.mouse_listener = get_listeners()
         self.keyboard_listener.start()
         self.mouse_listener.start()
 
@@ -485,6 +508,7 @@ class DAggrGrabber(RLGrabber):
                         rec_mouse_xy = np.array([0., 0.], dtype=np.float32)
                         print("\rWarning: new_mouse_pos is None", end='')
                     rec_act = np.array(list(actions.values()), dtype=np.float32)
+                    actions[MOUSE_BUTTONS['dy']] = 0
                     if np.max(np.abs(rec_mouse_xy), axis=None) > 50:
                         print(rec_mouse_xy, last_mouse_pos)
                     # if rec_act.any():
