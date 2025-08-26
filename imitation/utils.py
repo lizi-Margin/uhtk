@@ -5,9 +5,12 @@ from random import sample
 from uhtk.UTIL.colorful import *
 from uhtk.siri.utils.lprint import lprint, lprint_
 from uhtk.siri.utils.iterable_eq import iterable_eq
+from uhtk.imitation.video_io import dump_FRAMEs_to_video, load_FRAMEs_from_video
 
 import platform
 IS_WINDOWS = (platform.system() == 'Windows')
+USE_VIDEO_IO = True
+VIDEO_IO_COMPRESS_QUALITY = 100
 
 class cfg:
     logdir = 'G:/HMP_IL/'
@@ -28,6 +31,29 @@ def save_and_compress_FRAMEs(FRAMEs: np.ndarray, path, FRAMEs_name):
     FRAMEs_dir = os.path.join(path, FRAMES_dir_name)
     if not os.path.exists(FRAMEs_dir):
         os.makedirs(FRAMEs_dir)
+
+    if USE_VIDEO_IO:
+        from uhtk.siri.grabber_config import GrabberConfig as cfg
+        vid_path =              os.path.join(FRAMEs_dir,      f"{FRAMEs_name}.mp4")
+        vid_file_name_to_load = os.path.join(FRAMES_dir_name, f"{FRAMEs_name}.mp4")
+        dump_FRAMEs_to_video(
+            FRAMEs,
+            vid_path,
+            fps=1/cfg.tick,
+            quality=VIDEO_IO_COMPRESS_QUALITY
+        )
+        assert os.path.exists(vid_path)
+
+        image_data = {
+            'file_name': vid_file_name_to_load,
+            'save_time': time.strftime('%Y%m%d-%H:%M:%S'),
+            'tick_time_may_be_wrong': cfg.tick,
+            'num_frames': len(FRAMEs),
+        }
+        json_path = os.path.join(path, f"{FRAMEs_name}.json")
+        with open(json_path, 'w') as f:
+            json.dump(image_data, f)
+        return
 
     image_data = []
     for i, img_np in enumerate(FRAMEs):
@@ -54,32 +80,40 @@ def save_and_compress_FRAMEs(FRAMEs: np.ndarray, path, FRAMEs_name):
 def load_compressed_FRAMEs(path, FRAMEs_name):
     with open(os.path.join(path, f"{FRAMEs_name}.json"), 'r') as f:
         meta_data = json.load(f)
+    
+    if isinstance(meta_data, dict):
+        vid_file_name = meta_data['file_name']
+        vid_path = os.path.join(path, vid_file_name)
+        images = load_FRAMEs_from_video(vid_path)
+        assert isinstance(images, list)
+        assert len(images) > 0
+    else:
+        assert isinstance(meta_data, list), f"type(meta_data)={type(meta_data)}, which should be list in old png dir format"
+        images = []
+        for img_info in meta_data:
+            file_name = img_info['file_name']
+            expected_shape = img_info['shape']
+            if ('is_nan' in img_info) and img_info['is_nan'] == True:
+                is_nan = True
+                img_np = np.zeros(expected_shape, dtype=np.uint8)
+                # img_np[...] = np.nan
+            else:
+                is_nan = False
+                img_path = os.path.join(path, file_name)
+                img_np = cv2.imread(img_path).astype(np.uint8)
+                loaded_shape = img_np.shape
 
-    images = []
-    for img_info in meta_data:
-        file_name = img_info['file_name']
-        expected_shape = img_info['shape']
-        if ('is_nan' in img_info) and img_info['is_nan'] == True:
-            is_nan = True
-            img_np = np.zeros(expected_shape, dtype=np.uint8)
-            # img_np[...] = np.nan
-        else:
-            is_nan = False
-            img_path = os.path.join(path, file_name)
-            img_np = cv2.imread(img_path).astype(np.uint8)
-            loaded_shape = img_np.shape
+                if not iterable_eq(expected_shape, loaded_shape):
+                    raise ValueError(f"Image {file_name} has inconsistent shape. "
+                                    f"Expected: {expected_shape}, Got: {loaded_shape}")
+                
+            print(f"\r[load_compressed_FRAMEs] loading {file_name}, is_nan={is_nan}", end='')
 
-            if not iterable_eq(expected_shape, loaded_shape):
-                raise ValueError(f"Image {file_name} has inconsistent shape. "
-                                f"Expected: {expected_shape}, Got: {loaded_shape}")
-            
-        print(f"\r[load_compressed_FRAMEs] loading {file_name}, is_nan={is_nan}", end='')
+            # if len(expected_shape) == 3 and expected_shape[2] == 3:
+            #     img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
 
-        # if len(expected_shape) == 3 and expected_shape[2] == 3:
-        #     img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
-
-        images.append(img_np)
-    print(end='\n')
+            images.append(img_np)
+        print(end='\n')
     
     return np.array(images)
 

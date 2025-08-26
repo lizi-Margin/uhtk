@@ -7,7 +7,7 @@ def get_root_dir():
 
 class GrabberConfig:
     root_dir = get_root_dir()
-    tick = 0.04
+    tick = 0.1
     # sz_wh = (1280, 578)
     sz_wh = (320, 200)
 

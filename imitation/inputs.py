@@ -53,7 +53,7 @@ KEY_INPUTS = [
     'j', 'k', 'l', 
     't', 'y',      
     'v', 'b', 'm', 
-    'shift_l', 'caps_lock', 'tab',
+    'ctrl_l', 'shift_l', 'caps_lock', 'tab',
     'z', 'x',
 ]
 
@@ -98,6 +98,8 @@ def on_key_press(key):
         actions['caps_lock'] = 1
     elif key == Key.tab:
         actions['tab'] = 1
+    elif key == Key.ctrl_l:
+        actions['ctrl_l'] = 1
     elif hasattr(key, 'char'):
         if key.char in actions:
             actions[key.char] = 1
@@ -117,6 +119,8 @@ def on_key_release(key):
         actions['caps_lock'] = 0
     elif key == Key.tab:
         actions['tab'] = 0
+    elif key == Key.ctrl_l:
+        actions['ctrl_l'] = 0
     elif hasattr(key, 'char') and key.char in actions:
         actions[key.char] = 0
 
@@ -151,7 +155,7 @@ class ILGrabber(ScrGrabber):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.traj_pool: list[trajectory] = []
-        self.tick = 0.1
+        self.tick = cfg.tick
         self.traj_limit = 200
         lprint(self, f"traj time limit: {self.tick * self.traj_limit}")
 
