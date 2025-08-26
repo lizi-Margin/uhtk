@@ -16,6 +16,8 @@ from .filter import mouse_filter, mouse_pos_filter
 from uhtk.siri.grabber_config import GrabberConfig as cfg
 from uhtk.siri.grabber_config import GrabberStatus
 
+import platform
+IS_WINDOWS = (platform.system() == 'Windows')
 
 # Define keys and mouse buttons to track
 # KEY_INPUTS = [
@@ -248,7 +250,10 @@ class ILGrabber(ScrGrabber):
             GrabberStatus.monitor = None
             GrabberStatus.stop_event.set()
             for i in range(len(self.traj_pool)): self.traj_pool[i].cut_tail()
-            pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime("%Y%m%d-%H:%M:%S")}"
+            if IS_WINDOWS:
+                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H#%M#%S')}"
+            else:
+                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H:%M:%S')}"
             safe_dump_traj_pool(self.traj_pool, pool_name)
             print亮黄(lprint_(self, "terminated"))
 
@@ -538,8 +543,12 @@ class DAggrGrabber(RLGrabber):
     def save_traj(self):
         if len(self.traj_pool) > 0:
             for i in range(len(self.traj_pool)): self.traj_pool[i].cut_tail()
-            pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime("%Y%m%d-%H:%M:%S")}"
-            safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime("%Y%m%d-%H:%M:%S")}/")
+            if IS_WINDOWS:
+                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H#%M#%S')}"
+                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H#%M#%S')}/")
+            else:
+                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H:%M:%S')}"
+                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H:%M:%S')}/")
             self.traj_pool = []
 
 

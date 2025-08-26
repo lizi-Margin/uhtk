@@ -166,7 +166,8 @@ def safe_load(obj, path):
 
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
-    if traj_dir is None: traj_dir = f"{cfg.logdir}/{time.strftime("%Y%m%d-%H:%M:%S")}/"
+    if traj_dir is None:
+        traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H:%M:%S')}/"
     
     for index, traj in enumerate(traj_pool):
         traj_name = f"traj-{pool_name}-{index}.d"
