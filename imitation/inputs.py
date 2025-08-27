@@ -215,6 +215,7 @@ class ILGrabber(ScrGrabber):
                     if stop:
                         print(end='\n')
                         while not start: 
+                            self.save_traj()
                             time.sleep(0.25)
                             print靛('\r'+lprint_(self, "paused"), end='')
                         if traj.time_pointer > 0:
@@ -278,13 +279,20 @@ class ILGrabber(ScrGrabber):
             # cv2.destroyAllWindows()
             GrabberStatus.monitor = None
             GrabberStatus.stop_event.set()
+            self.save_traj()
+            print亮黄(lprint_(self, "terminated"))
+
+    def save_traj(self):
+        if len(self.traj_pool) > 0:
             for i in range(len(self.traj_pool)): self.traj_pool[i].cut_tail()
             if IS_WINDOWS:
                 pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H#%M#%S')}"
+                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H#%M#%S')}/")
             else:
                 pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H:%M:%S')}"
-            safe_dump_traj_pool(self.traj_pool, pool_name)
-            print亮黄(lprint_(self, "terminated"))
+                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H:%M:%S')}/")
+            self.traj_pool = []
+
 
 def norm(x: float, lower_side: float=-1.0, upper_side: float=1.0):
     if (x > upper_side): x = upper_side
@@ -568,16 +576,5 @@ class DAggrGrabber(RLGrabber):
             self.save_traj()
             print亮黄(lprint_(self, "terminated"))
     
-    def save_traj(self):
-        if len(self.traj_pool) > 0:
-            for i in range(len(self.traj_pool)): self.traj_pool[i].cut_tail()
-            if IS_WINDOWS:
-                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H#%M#%S')}"
-                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H#%M#%S')}/")
-            else:
-                pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H:%M:%S')}"
-                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H:%M:%S')}/")
-            self.traj_pool = []
-
 
 
