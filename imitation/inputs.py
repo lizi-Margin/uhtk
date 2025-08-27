@@ -258,8 +258,8 @@ class ILGrabber(ScrGrabber):
                         lprint(self, "Warning: new_mouse_pos is None")
                     act = np.array(list(actions.values()), dtype=np.float32)
                     
-                    # if act.any():
-                    #     print(actions)
+                    if act.any():
+                        print(actions)
                     if np.max(np.abs(mouse_movement), axis=None) > 50:
                         print(mouse_movement, last_mouse_pos)
 
@@ -287,10 +287,12 @@ class ILGrabber(ScrGrabber):
             for i in range(len(self.traj_pool)): self.traj_pool[i].cut_tail()
             if IS_WINDOWS:
                 pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H#%M#%S')}"
-                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H#%M#%S')}/")
+                # safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/AUTOSAVED/{time.strftime('%Y%m%d-%H#%M#%S')}/")
+                safe_dump_traj_pool(self.traj_pool, pool_name)
             else:
                 pool_name = f"{self.__class__.__name__}-tick={self.tick}-limit={self.traj_limit}-{time.strftime('%Y%m%d-%H:%M:%S')}"
-                safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/DAggr/AUTOSAVED/{time.strftime('%Y%m%d-%H:%M:%S')}/")
+                # safe_dump_traj_pool(self.traj_pool, pool_name, traj_dir=f"HMP_IL/AUTOSAVED/{time.strftime('%Y%m%d-%H:%M:%S')}/")
+                safe_dump_traj_pool(self.traj_pool, pool_name)
             self.traj_pool = []
 
 

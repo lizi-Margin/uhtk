@@ -10,7 +10,7 @@ from uhtk.imitation.video_io import dump_FRAMEs_to_video, load_FRAMEs_from_video
 import platform
 IS_WINDOWS = (platform.system() == 'Windows')
 USE_VIDEO_IO = True
-VIDEO_IO_COMPRESS_QUALITY = 100
+VIDEO_IO_COMPRESS_QUALITY = 90
 
 class cfg:
     logdir = 'G:/HMP_IL/'
@@ -202,12 +202,12 @@ def safe_load(obj, path):
 
 
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
-    default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
+    # default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
     if traj_dir is None:
         if IS_WINDOWS:
-            traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H#%M#%S')}/"
+            traj_dir = f"{cfg.logdir}/Default/{time.strftime('%Y%m%d-%H#%M#%S')}/"
         else:
-            traj_dir = f"{cfg.logdir}/{time.strftime('%Y%m%d-%H:%M:%S')}/"
+            traj_dir = f"{cfg.logdir}/Default/{time.strftime('%Y%m%d-%H:%M:%S')}/"
     
     for index, traj in enumerate(traj_pool):
         traj_name = f"traj-{pool_name}-{index}.d"

@@ -9,7 +9,8 @@ class GrabberConfig:
     root_dir = get_root_dir()
     tick = 0.1
     # sz_wh = (1280, 578)
-    sz_wh = (320, 200)
+    # sz_wh = (320, 200)
+    sz_wh = (960, 600)
 
 class GrabberStatus:
     monitor = None
