@@ -8,9 +8,17 @@ def get_root_dir():
 class GrabberConfig:
     root_dir = get_root_dir()
     tick = 0.1
+
+    # SIRI Standard
     # sz_wh = (1280, 578)
+
+    # 2560 x 1600
     # sz_wh = (320, 200)
-    sz_wh = (960, 600)
+    # sz_wh = (960, 600)
+
+    # 2560 x 1440
+    # sz_wh = (320, 180)
+    sz_wh = (960, 540)
 
 class GrabberStatus:
     monitor = None

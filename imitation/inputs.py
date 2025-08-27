@@ -53,7 +53,7 @@ KEY_INPUTS = [
     'j', 'k', 'l', 
     't', 'y',      
     'v', 'b', 'm', 
-    'ctrl_l', 'shift_l', 'caps_lock', 'tab',
+    'alt_l', 'ctrl_l', 'shift_l', 'caps_lock', 'tab', '`', 'esc',
     'z', 'x',
 ]
 
@@ -100,6 +100,10 @@ def on_key_press(key):
         actions['tab'] = 1
     elif key == Key.ctrl_l:
         actions['ctrl_l'] = 1
+    elif key == Key.alt_l:
+        actions['alt_l'] = 1
+    elif key == Key.esc:
+        actions['esc'] = 1
     elif hasattr(key, 'char'):
         if key.char in actions:
             actions[key.char] = 1
@@ -121,6 +125,10 @@ def on_key_release(key):
         actions['tab'] = 0
     elif key == Key.ctrl_l:
         actions['ctrl_l'] = 0
+    elif key == Key.alt_l:
+        actions['alt_l'] = 0
+    elif key == Key.esc:
+        actions['esc'] = 0
     elif hasattr(key, 'char') and key.char in actions:
         actions[key.char] = 0
 
@@ -214,13 +222,13 @@ class ILGrabber(ScrGrabber):
                 while True:
                     if stop:
                         print(end='\n')
+                        if traj.time_pointer > 0:
+                            self.traj_pool.append(traj)
+                            traj = self.new_traj()
                         while not start: 
                             self.save_traj()
                             time.sleep(0.25)
                             print靛('\r'+lprint_(self, "paused"), end='')
-                        if traj.time_pointer > 0:
-                            self.traj_pool.append(traj)
-                            traj = self.new_traj()
                         init_actions()
                         new_mouse_pos = None; last_mouse_pos = None
                         stop = 0
