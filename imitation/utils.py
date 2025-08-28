@@ -25,6 +25,7 @@ def is_basic_type(obj):
     else:
         return False
 
+##############################################################################################################
 
 def save_and_compress_FRAMEs(FRAMEs: np.ndarray, path, FRAMEs_name):
     FRAMES_dir_name = f"{FRAMEs_name}.d"
@@ -52,7 +53,7 @@ def save_and_compress_FRAMEs(FRAMEs: np.ndarray, path, FRAMEs_name):
         }
         json_path = os.path.join(path, f"{FRAMEs_name}.json")
         with open(json_path, 'w') as f:
-            json.dump(image_data, f)
+            json.dump(image_data, f, indent=2)
         return
 
     image_data = []
@@ -74,7 +75,7 @@ def save_and_compress_FRAMEs(FRAMEs: np.ndarray, path, FRAMEs_name):
 
     json_path = os.path.join(path, f"{FRAMEs_name}.json")
     with open(json_path, 'w') as f:
-        json.dump(image_data, f)
+        json.dump(image_data, f, indent=2)
 
 
 def load_compressed_FRAMEs(path, FRAMEs_name):
@@ -117,6 +118,10 @@ def load_compressed_FRAMEs(path, FRAMEs_name):
     
     return np.array(images)
 
+##############################################################################################################
+
+NPY_special_key = 'npy_filenames'
+FRAME_special_key = 'FRAMEs_filenames'
 
 def safe_dump(obj, path):
     if not os.path.exists(path): os.makedirs(path)
@@ -136,22 +141,25 @@ def safe_dump(obj, path):
         else:
             assert False, f'not implemented yet, key={attr} type={type(value)}'
 
+    assert not NPY_special_key in serializable_data
+    assert not FRAME_special_key in serializable_data
+
     npy_filenames = {}
     for key, array in numpy_arrays.items():
         npy_filename = f"{cls_name}_{key}.npy"
         np.save(f"{path}/{npy_filename}", array, allow_pickle=True)
         npy_filenames[key] = npy_filename
-    serializable_data['npy_filenames'] = npy_filenames
+    serializable_data[NPY_special_key] = npy_filenames
 
     FRAMEs_filenames = {}
     for key, frame in FRAMEs.items():
         FRAMEs_name = f"{cls_name}_{key}"
         save_and_compress_FRAMEs(frame, path, FRAMEs_name)
         FRAMEs_filenames[key] = FRAMEs_name
-    serializable_data['FRAMEs_filenames'] = FRAMEs_filenames
+    serializable_data[FRAME_special_key] = FRAMEs_filenames
 
     with open(f"{path}/{cls_name}.json", 'w') as f:
-        json.dump(serializable_data, f)
+        json.dump(serializable_data, f, indent=2)
 
 old_dataset_names = [
     'traj-Grabber-tick=0.1-limit=200-pp19',
@@ -178,7 +186,7 @@ def safe_load(obj, path):
         serializable_data = json.load(f)
     assert isinstance(serializable_data, dict)
 
-    npy_filenames = serializable_data.pop('npy_filenames')
+    npy_filenames = serializable_data.pop(NPY_special_key)
     for key, npy_filename in npy_filenames.items():
         numpy_arrays[key] = np.load(f"{path}/{npy_filename}", allow_pickle=True)
 
@@ -190,8 +198,8 @@ def safe_load(obj, path):
                 print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processed")
 
 
-    if 'FRAMEs_filenames' in serializable_data:
-        FRAMEs_filenames = serializable_data.pop('FRAMEs_filenames')
+    if FRAME_special_key in serializable_data:
+        FRAMEs_filenames = serializable_data.pop(FRAME_special_key)
         for key, FRAMEs_name in FRAMEs_filenames.items():
             FRAMEs[key] = load_compressed_FRAMEs(path, FRAMEs_name)
 
@@ -200,6 +208,7 @@ def safe_load(obj, path):
     
     return obj
 
+##############################################################################################################
 
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     # default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
@@ -218,7 +227,6 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     # if os.path.islink(default_traj_dir[:-1]):
     #     os.unlink(default_traj_dir[:-1])
     # os.symlink(os.path.abspath(traj_dir), os.path.abspath(default_traj_dir))
-
 
 class safe_load_traj_pool:
     def __init__(self, max_len=None, traj_dir="traj_pool_safe"):
@@ -283,7 +291,7 @@ class safe_load_traj_pool:
         print(f"safe loaded {len(traj_pool)} trajs")
         return traj_pool
 
-
+##############################################################################################################
 
 def get_container_from_traj_pool(traj_pool, req_dict_rename, req_dict=None):
     container = {}
