@@ -45,17 +45,17 @@ class LogManager():
         for key in self.trivial_dict:
             self.trivial_dict[key] = self.trivial_dict[key].mean()
             print_buf.append(' %s:%.3f, ' % (key, self.trivial_dict[key]))
-            if self.mcv is not None:
-                alpha = 0.98
-                if key in self.smooth_trivial_dict:
-                    self.smooth_trivial_dict[key] = alpha*self.smooth_trivial_dict[key] + (1-alpha)*self.trivial_dict[key]
-                else:
-                    self.smooth_trivial_dict[key] = self.trivial_dict[key]
-                self.mcv.rec(self.trivial_dict[key], key)
-                self.mcv.rec(self.smooth_trivial_dict[key], key + ' - smooth')
+            
+            alpha = 0.98
+            if key in self.smooth_trivial_dict:
+                self.smooth_trivial_dict[key] = alpha*self.smooth_trivial_dict[key] + (1-alpha)*self.trivial_dict[key]
+            else:
+                self.smooth_trivial_dict[key] = self.trivial_dict[key]
+            self.mcv.rec(self.trivial_dict[key], key)
+            self.mcv.rec(self.smooth_trivial_dict[key], key + ' - smooth')
         if print:
             print紫(''.join(print_buf))
-        if self.mcv is not None:
-            self.mcv.rec_show()
+
+        self.mcv.rec_show()
 
         self.trivial_dict = {}
