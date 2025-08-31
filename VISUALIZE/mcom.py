@@ -5,7 +5,6 @@ from uhtk.UTIL.colorful import *
 from uhtk.UTIL.network import get_host_ip, find_free_port
 from .mcom_def import fn_names, align_names, find_where_to_log
 
-logdir = './VISUALIZE_logdir/'
 
 class mcom():
     """
@@ -22,12 +21,12 @@ class mcom():
             figsize: if draw_mode=='Img', determine the size of the figure, default is (12, 6)
             rec_exclude: if draw_mode=='Img', blacklist some vars
     """
-    def __init__(self, path=None, digit=-1, rapid_flush=True, draw_mode="Img", tag='default', resume_mod=False, **kargs):
+    def __init__(self, path=None, digit=-1, rapid_flush=True, draw_mode="Img", resume_mod=False, **kargs):
         self.draw_mode = draw_mode
         self.rapid_flush = rapid_flush
         self.path = path
         self.digit = digit
-        self.tag = tag
+        # self.tag = tag
         self.resume_mod = resume_mod
         self.kargs = kargs
         if self.kargs is None: self.kargs = {}
@@ -437,9 +436,9 @@ class DrawProcess(Process):
         else:
             assert False
 
-        global logdir
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
+        if 'logdir' in self.kwargs:
+            logdir = self.kwargs['logdir']
+            if not os.path.exists(logdir): os.makedirs(logdir)
         if self.draw_mode == 'Web':
             self.avail_port = find_free_port()
             my_http = MyHttp('%s/html.html'%logdir, self.avail_port)

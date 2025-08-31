@@ -2,14 +2,14 @@ import numpy as np
 from uhtk.UTIL.colorful import *
 
 
-def get_a_logger(who, color='k'):
-    from uhtk.VISUALIZE.mcom import mcom, logdir
+def get_a_logger(logdir, color='k'):
+    from uhtk.VISUALIZE.mcom import mcom
     mcv = mcom(
-        path='%s/logger/' % logdir,
+        path=f'{logdir}/mcom/',
+        logdir=logdir,
         digit=16,
         rapid_flush=True,
         draw_mode='Img',
-        tag=f'[{who}]',
         resume_mod=False
     )
     mcv.rec_init(color=color)
@@ -17,16 +17,11 @@ def get_a_logger(who, color='k'):
 
 
 class LogManager():
-    def __init__(self, mcv=None, who=None):
+    def __init__(self, mcv, who=None):
         if who is None:
-            who = '*nobody*'
+            who = '*default*'
         self.who = who
-
-        if mcv is None:
-            self.mcv = get_a_logger(self.who)
-        else:
-            self.mcv = mcv
-
+        self.mcv = mcv
         self.trivial_dict = {}
         self.smooth_trivial_dict = {}
 

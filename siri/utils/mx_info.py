@@ -69,6 +69,7 @@ def get_mx_info():
         'Hostname': socket.gethostname(),
     }
     info['Network'] = network_info
+    return info
     
 
 def register_mx_info(logdir):

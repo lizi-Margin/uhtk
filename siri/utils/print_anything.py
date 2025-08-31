@@ -6,6 +6,7 @@ def print_obj(obj):
         if not attr.startswith('__'):
             value = getattr(obj, attr)
             print(f"{attr}: {value}")
+            # print(f"{attr}")
 
 
 def print_dict(data):

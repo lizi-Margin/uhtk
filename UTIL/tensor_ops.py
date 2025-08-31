@@ -14,14 +14,15 @@ from functools import wraps
 
 
 class ConfigCache(object):
+    device_to_config = 'cuda'
+
     def __init__(self) -> None:
         super().__init__()
         self.init = False
 
     def read_cfg(self):
-        from global_config import GlobalConfig
-        self.device_ = GlobalConfig.device
-        self.use_float64_ = not GlobalConfig.half
+        self.device_ = self.device_to_config
+        self.use_float64_ = False
         self.init = True
 
     @property

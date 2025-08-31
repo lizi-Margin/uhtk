@@ -38,8 +38,9 @@ class rec_family(object):
         self.rec_exclude = rec_exclude
         self.vis_95percent = True
         self.enable_percentile_clamp = True
-        from .mcom import logdir as lgd
-        logdir = lgd
+        if 'logdir' in kwargs:
+            logdir = kwargs['logdir']
+        else: logdir = './VISUALIZE_logdir/'
         self.plt = None
         self.json_to_dump = '%s/rec.json'%logdir
         self.csv_to_dump = '%s/rec.csv'%logdir
@@ -249,7 +250,11 @@ class rec_family(object):
         return np.array(d)
 
     def recreate_fig_handle(self, index, num_group):
-        handle = self.plt.figure(index, figsize=self.get_figure_size(num_group, baseline=6), dpi=100)
+        if index in self.plt.get_fignums():  # already exists, stop the buzzering UserWarning
+            handle = self.plt.figure(index)
+        else:
+            handle = self.plt.figure(index, figsize=self.get_figure_size(num_group, baseline=6), dpi=100)
+
         # solve a bug inside matplotlib
         if self.default_fig_spp is None:
             self.default_fig_spp = copy.deepcopy(handle.subplotpars)
