@@ -5,6 +5,7 @@ from random import sample
 from uhtk.UTIL.colorful import *
 from uhtk.siri.utils.lprint import lprint, lprint_
 from uhtk.siri.utils.iterable_eq import iterable_eq
+from uhtk.siri.utils.is_basic_type import is_basic_type
 from uhtk.siri.utils.video_io import dump_FRAMEs_to_video, load_FRAMEs_from_video
 
 import platform
@@ -15,15 +16,7 @@ VIDEO_IO_COMPRESS_QUALITY = 90
 class cfg:
     logdir = 'G:/HMP_IL/'
 
-def is_basic_type(obj):
-    if (
-        isinstance(obj, int) or isinstance(obj, bool) or isinstance(obj, str) 
-        or isinstance(obj, list) or isinstance(obj, tuple) or isinstance(obj, dict)
-        or (obj is None)
-    ):
-        return True
-    else:
-        return False
+
 
 ##############################################################################################################
 
