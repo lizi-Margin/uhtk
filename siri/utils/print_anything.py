@@ -51,8 +51,9 @@ def print_obj(obj, indent=0, deep=False, _recursive=True):
         print(f"{prefix}{typename} instance")
         if _recursive:
             for attr in dir(obj):
-                # if not attr.startswith('__'):
+                if not attr.startswith('__'):
                     value = getattr(obj, attr)
+                    print(f"{prefix}{attr}->")
                     print_obj(value, indent=indent+1, _recursive=deep)
                     # print(f"{attr}")
         return
@@ -75,9 +76,13 @@ def print_list(data):
     # item_len = []
     # for item in data: item_len.append(len(item))
     # print(item_len)
-    print("[", end="")
+    print("[", end="\n")
     for index, item in enumerate(data): 
-        print(f" {index}: ", end="")
+        if hasattr(index, "__dict__") or hasattr(index, "__slots__"):
+            print(f" {index}: instance type={type(data)}", end="\n")
+        else:
+            print_obj(item, indent=1, deep=False)
+        # print(f" {index}: ", end="")
         # print_dict(vars(item))
-        print_obj(item, indent=1, deep=False)
+        # print_obj(item, indent=1, deep=False)
     print("]")

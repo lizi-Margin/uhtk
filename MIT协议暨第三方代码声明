@@ -12,5 +12,5 @@ Copyright (c) 2025 shc
 HMAP: Hybrid Multi-Agent Playground
 许可证: MIT License
 Copyright (c) 2020 binary-husky
-代码位于`/UTIL`、`/VISUALIZE`目录，来源：[https://github.com/binary-husky/hmp2g]
+代码位于`/UTIL`、`/VISUALIZE`、`uhtk/encoder/norm.py`目录，来源：[https://github.com/binary-husky/hmp2g]
 

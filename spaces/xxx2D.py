@@ -1,39 +1,163 @@
+"""
+    Author: sunhaocheng@bupt.edu.cn
+    Description: Anything to Discrete
+        1. Box2D
+        2. MultiDiscete2D
+        3. Discrete to Discrete (of course)
+        4. list of Box, MultiDiscte, Discrete to Discrete
+"""
+
 import numpy as np
 import gymnasium as gym
 import gymnasium.spaces as spaces
 from typing import Union, List, Tuple
+from uhtk.print_pack import *
 from uhtk.siri.utils.lprint import lprint
+from uhtk.siri.utils.iterable_eq import iterable_prod
 from .xxx2D_api import ActionDiscretizer
 
-def XXX2D(space: gym.Space) -> ActionDiscretizer:
+# def XXX2D(space: gym.Space) -> ActionDiscretizer:
+#     if isinstance(space, gym.spaces.Discrete):
+#         return D2D(space)
+#     elif isinstance(space, gym.spaces.Box):
+#         raise NotImplementedError("Box (non-discrete) spaces need a 'n_bins' param to cut, go use Box2D.")
+#     elif isinstance(space, gym.spaces.MultiDiscrete):
+#         # eg. MultiDiscrete [1, 2, 3, 4, 5] -> n_action: 1*2*3*4*5
+#         return MD2D(space)
+#     else:
+#         raise ValueError(f"Unsupported action space type: {type(space)}")
+
+# def XXX2D(space: gym.Space):
+#     if isinstance(space, gym.spaces.Discrete):
+#         return D2D
+#     elif isinstance(space, gym.spaces.Box):
+#         return Box2D
+#     elif isinstance(space, gym.spaces.MultiDiscrete):
+#         # eg. MultiDiscrete [1, 2, 3, 4, 5] -> n_action: 1*2*3*4*5
+#         return MD2D
+#     else:
+#         raise ValueError(f"Unsupported action space type: {type(space)}")
+
+def is_Box(space: gym.Space) -> bool:
+    if isinstance(space, gym.spaces.Box):
+        return True
+    elif 'Box' in space.__class__.__name__:
+        return True
+    return False
+
+def is_Discrete(space: gym.Space) -> bool:
     if isinstance(space, gym.spaces.Discrete):
-        return D2D(space)
-    elif isinstance(space, gym.spaces.Box):
-        raise NotImplementedError("Box (non-discrete) spaces need a 'n_bins' param to cut, go use Box2D.")
-    elif isinstance(space, gym.spaces.MultiDiscrete):
-        # eg. MultiDiscrete [1, 2, 3, 4, 5] -> n_action: 1*2*3*4*5
-        return MD2D(space)
-    else:
-        raise ValueError(f"Unsupported action space type: {type(space)}")
+        return True
+    elif 'Discrete' in space.__class__.__name__:
+        return True
+    return False
+
+def is_MultiDiscrete(space: gym.Space) -> bool:
+    if isinstance(space, gym.spaces.MultiDiscrete):
+        return True
+    elif 'MultiDiscrete' in space.__class__.__name__:
+        return True
+    return False
+
+
+class Anything2D(ActionDiscretizer):
+    def __init__(self,spaces: list):
+        super().__init__()
+        if isinstance(spaces, gym.Space): spaces = [spaces]
+        assert isinstance(spaces, list)
+
+        self.adapters = []
+        self.nvec = []
+        # self.dtype = self.spaces[0].dtype
+        # self.dtype = np.float32
+        for space in spaces:
+            if is_Discrete(space):
+                self.adapters.append(D2D(space))
+            elif is_Box(space):
+                self.adapters.append(Box2D.auto_init(space))
+            elif is_MultiDiscrete(space):
+                self.adapters.append(MD2D(space))
+            else:
+                raise ValueError(f"Unsupported action space type: {type(space)}")
+            self.nvec.append(self.adapters[-1].n_actions)
+        self.n_actions = iterable_prod(self.nvec)
+    
+    def index_to_action(self, index):
+        indices = np.array(np.unravel_index(int(index), self.nvec), dtype=np.float32)
+        length = len(indices)
+        assert length == len(self.adapters)
+        # return np.array([self.adapters[i](indices[i]) for i in range(length)])
+        return [self.adapters[i].index_to_action(indices[i]) for i in range(length)]
+
+
+class DL2D(ActionDiscretizer):
+    @staticmethod
+    def check_MDL_space(spc: list):
+        assert isinstance(spc, list), str(spc)
+        n_list = []
+        for disc in spc:
+            if not is_Discrete(disc):
+                raise ValueError(f"{disc} is a Discrete space?")
+            assert disc.dtype == spc[0].dtype, f"{disc.dtype} {spc[0].dtype}"
+            n_list.append(disc.n)
+        return n_list
+    @staticmethod
+    def is_MDL_space(spc):
+        try:
+            DL2D.check_MDL_space(spc)
+        except:
+            return False
+        return True
+    def __init__(self, raw_space: list):
+        super().__init__()
+        self.nvec = np.array(self.check_MDL_space(raw_space))
+        self.space_list = raw_space
+        self.n_actions = iterable_prod(self.nvec)
+        self.dtype = self.space_list[0].dtype
+    
+    def index_to_action(self, index):
+        indices = np.array(np.unravel_index(int(index), self.nvec), dtype=self.dtype)
+        return indices
+
 
 class MD2D(ActionDiscretizer): 
     def get_n_actions(space: gym.Space) -> int:
-        assert isinstance(space, gym.spaces.MultiDiscrete)
+        assert is_MultiDiscrete(space)
         # eg. MultiDiscrete [1, 2, 3, 4, 5] -> n_action: 1*2*3*4*5
         return np.prod(space.nvec)
 
     def __init__(self, md: gym.spaces.MultiDiscrete):
         self.md = md
         self.nvec = md.nvec
-        self.n = self.get_n_actions(md)
+        self.n_actions = self.get_n_actions(md)
     
     def index_to_action(self, index):
         indices = np.array(np.unravel_index(int(index), self.nvec), dtype=self.md.dtype)
         return indices
 
 class Box2D(ActionDiscretizer):
+    @staticmethod
+    def auto_init(raw_action_space: spaces.Box, n_bins_avg: int = 2):
+        assert is_Box(raw_action_space)
+
+        n_dim = len(raw_action_space.low)
+        target_total_bins = n_bins_avg * n_dim  # 目标总数
+
+        ranges = raw_action_space.high - raw_action_space.low
+        ranges = np.clip(ranges, 1e-8, None)  # 防止除零
+
+        weights = ranges / ranges.sum()
+        n_bins_per_dim = weights * target_total_bins
+
+        n_bins_per_dim = np.round(n_bins_per_dim).astype(int)
+        n_bins_per_dim = np.maximum(n_bins_per_dim, 2)
+
+        print黄(f"[Box2D] Warning: auto_init, total_bins={target_total_bins}, space={raw_action_space}, n_bins_per_dim={n_bins_per_dim}")
+
+        return Box2D(raw_action_space, n_bins_per_dim)
+        
     def __init__(self, raw_action_space: spaces.Box, n_bins_per_dim: Union[np.ndarray, List]):
-        assert isinstance(raw_action_space, spaces.Box)
+        assert is_Box(raw_action_space)
         if isinstance(n_bins_per_dim, list):
             n_bins_per_dim = np.array(n_bins_per_dim)
         elif isinstance(n_bins_per_dim, int):
@@ -49,7 +173,7 @@ class Box2D(ActionDiscretizer):
         self.intervals = (self.high - self.low) / self.n_bins
 
         self.n_actions = np.prod(self.n_bins + 1)  # Adjust to include original number of bins
-        assert isinstance(self.n_actions, np.int32)
+        assert isinstance(self.n_actions, (np.int32, np.int64, int)), f"{self.n_actions}, {self.n_actions.dtype}"
         self.n_actions = int(self.n_actions)
 
     def index_to_action(self, index):
@@ -62,7 +186,7 @@ class Box2D(ActionDiscretizer):
 
 class D2D(ActionDiscretizer):  # aka. DiscreteActSpaceWrapper
     def __init__(self, raw_action_space):
-        assert isinstance(raw_action_space, spaces.Discrete)
+        assert is_Discrete(raw_action_space)
         assert raw_action_space.start == 0
         self.raw_action_space = raw_action_space
         self.n_actions = raw_action_space.n
