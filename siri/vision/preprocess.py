@@ -206,7 +206,7 @@ def crop_left_right(x: np.ndarray, left_ratio: float, right_ratio: float):
     return x[:, left_crop:w - right_crop]
 
 
-def pre_transform(im, sz_wh):
+def pre_transform(im, sz_wh) -> List:
     # sz_wh = 640, 640
     letterbox = LetterBox(
         tuple(reversed(sz_wh)),

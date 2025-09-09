@@ -40,7 +40,7 @@ class ImgObsProcess(nn.Module):
         impala_chans: tuple = (16, 32, 32),
         cnn_outsize: int = 256,
         output_size: int = 512,
-        pre_norm: bool = True
+        pre_norm: bool = False
     ):
         super().__init__()
         assert len(imgshape_hwc) == 3, str(imgshape_hwc)
