@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from .utils import sequential, transpose, flatten_last3dims
-from uhtk.siri.utils.iterable_eq import iterable_prod as intprod
+from uhtk.siri.utils.iterable_tools import iterable_prod as intprod
 from .relu_layer import FanInInitReLULayer
 
 from uhtk.print_pack import *

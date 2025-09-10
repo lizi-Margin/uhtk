@@ -13,7 +13,7 @@ import gymnasium.spaces as spaces
 from typing import Union, List, Tuple
 from uhtk.print_pack import *
 from uhtk.siri.utils.lprint import lprint
-from uhtk.siri.utils.iterable_eq import iterable_prod
+from uhtk.siri.utils.iterable_tools import iterable_prod
 from .xxx2D_api import ActionDiscretizer
 
 # def XXX2D(space: gym.Space) -> ActionDiscretizer:

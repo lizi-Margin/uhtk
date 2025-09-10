@@ -11,7 +11,7 @@ from uhtk.siri.vision.preprocess import crop
 from uhtk.UTIL.colorful import *
 from .traj import trajectory
 from .utils import safe_dump_traj_pool
-from uhtk.siri.utils.iterable_eq import iterable_eq
+from uhtk.siri.utils.iterable_tools import iterable_eq
 from .filter import mouse_filter, mouse_pos_filter
 from uhtk.siri.grabber_config import GrabberConfig as cfg
 from uhtk.siri.grabber_config import GrabberStatus
