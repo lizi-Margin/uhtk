@@ -10,12 +10,16 @@ add_executable(test_c3utils "test_c3utils.cpp" "vector.h" "funcs.h" "c3utils.h" 
 #     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 # )
 
-set(Python3_EXECUTABLE "/usr/bin/python3.13")
-set(Python3_INCLUDE_DIR "/usr/include/python3.13")
-set(Python3_LIBRARY "/usr/lib/libpython3.13.so.1.0")
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-pybind11_add_module(py_c3utils_native PyInterface.cpp)
-target_link_libraries(py_c3utils_native PRIVATE pybind11::embed)
+# if is linux
+if(UNIX)
+    set(Python3_EXECUTABLE "/usr/bin/python3.13")
+    set(Python3_INCLUDE_DIR "/usr/include/python3.13")
+    set(Python3_LIBRARY "/usr/lib/libpython3.13.so")
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    pybind11_add_module(py_c3utils_native PyInterface.cpp)
+	target_link_libraries(py_c3utils_native PRIVATE pybind11::embed)
+endif()
+
 
 function(setup_pybind_proj_win pybind_proj_name conda_env_path conda_env_python_version)
     if(NOT EXISTS "${conda_env_path}/python.exe")
