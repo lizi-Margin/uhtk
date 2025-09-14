@@ -1,4 +1,4 @@
-# trojan
+# Maily from chatgpt
 # 说明：读取 trojan_lines.txt（每行一个 trojan://...），输出 proxies.yaml（YAML 片段）
 
 import sys
