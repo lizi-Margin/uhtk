@@ -1,5 +1,6 @@
 # Maily from chatgpt
 # 说明：读取 trojan_lines.txt（每行一个 trojan://...），输出 proxies.yaml（YAML 片段）
+# assert False, 'better try: https://tp.dy.ax/'
 
 import sys
 from urllib.parse import urlparse, unquote, parse_qs
