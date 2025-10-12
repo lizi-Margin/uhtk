@@ -14,6 +14,10 @@ from abc import ABC, abstractmethod
 class ActionDiscretizer(ABC):
     def __init__(self):
         self.n_actions = 0
+    
+    @property
+    def n(self):
+        return self.n_actions
 
     def index_to_action(self, index):
         raise NotImplementedError

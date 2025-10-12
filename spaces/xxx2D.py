@@ -121,6 +121,7 @@ class DL2D(ActionDiscretizer):
 
 
 class MD2D(ActionDiscretizer): 
+    @staticmethod
     def get_n_actions(space: gym.Space) -> int:
         assert is_MultiDiscrete(space)
         # eg. MultiDiscrete [1, 2, 3, 4, 5] -> n_action: 1*2*3*4*5
@@ -129,7 +130,7 @@ class MD2D(ActionDiscretizer):
     def __init__(self, md: gym.spaces.MultiDiscrete):
         self.md = md
         self.nvec = md.nvec
-        self.n_actions = self.get_n_actions(md)
+        self.n_actions = MD2D.get_n_actions(md)
     
     def index_to_action(self, index):
         indices = np.array(np.unravel_index(int(index), self.nvec), dtype=self.md.dtype)

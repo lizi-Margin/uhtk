@@ -49,21 +49,21 @@ def get_mx_info():
     }
     info['Memory'] = memory_info
 
-
-    cuda_info = {}
-    try:
-        import torch
-        cuda_available = torch.cuda.is_available()
-        cuda_info['CUDA_Available'] = cuda_available
-        if cuda_available:
-            device_count = torch.cuda.device_count()
-            cuda_info['GPU_Count'] = device_count
-            current_device = torch.cuda.current_device()
-            cuda_info['Current_Device'] = current_device
-            cuda_info['Current_Device_Name'] = torch.cuda.get_device_name(current_device)
-    except Exception as e:
-        cuda_info['Error'] = str(e)
-    info['CUDA'] = cuda_info
+    # deadly BUG, you import torch before forking the damn process !!!
+    # cuda_info = {}
+    # try:
+    #     import torch
+    #     cuda_available = torch.cuda.is_available()
+    #     cuda_info['CUDA_Available'] = cuda_available
+    #     if cuda_available:
+    #         device_count = torch.cuda.device_count()
+    #         cuda_info['GPU_Count'] = device_count
+    #         current_device = torch.cuda.current_device()
+    #         cuda_info['Current_Device'] = current_device
+    #         cuda_info['Current_Device_Name'] = torch.cuda.get_device_name(current_device)
+    # except Exception as e:
+    #     cuda_info['Error'] = str(e)
+    # info['CUDA'] = cuda_info
 
     network_info = {
         'Hostname': socket.gethostname(),
