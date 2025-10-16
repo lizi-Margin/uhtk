@@ -386,3 +386,36 @@ def nm_to_meters(nm):
 def meters_to_nm(meters):
     """Convert meters to nautical miles."""
     return meters / 1852
+
+
+
+K_C0 = 273.15
+
+def K_to_C(K: float) -> float:
+    return K - K_C0
+
+def C_to_K(C: float) -> float:
+    return C + K_C0
+
+def estimate_temperature_C(altitude: float) -> float:
+    T0 = 288.15
+    L = 0.0065
+    tropopause_altitude = 11000.0
+    ret = 216.65
+
+    if altitude <= tropopause_altitude:
+        ret = T0 - L * altitude
+    elif altitude <= 20000.0:
+        ret = 216.65
+
+    return K_to_C(ret)
+
+def mach_to_mps(mach: float, temperature_C: float) -> float:
+    gamma = 1.4
+    R = 287.05
+    temperature_K = C_to_K(temperature_C)
+    local_ss = math.sqrt(gamma * R * temperature_K)
+    return mach * local_ss
+
+def get_mps(mach: float, altitude: float) -> float:
+    return mach_to_mps(mach, estimate_temperature_C(altitude))
