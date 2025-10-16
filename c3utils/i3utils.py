@@ -72,30 +72,24 @@ if not use_cpp:
 
     class Vector3 :
         def __init__(self,list3) -> None:
-            self.vec = np.array(list3, dtype=np.float64)
+            # self.vec = np.array(list3, dtype=np.float64)
+            self.vec = np.array(list3, dtype=float)
 
         def rotate_xyz_self(self,ax,ay,az):
-            mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
-            my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
+            rotate_matrix =  np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
+            rotate_matrix = rotate_matrix @ np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
+            rotate_matrix = rotate_matrix @ np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
+            self.vec = rotate_matrix @ self.vec
+            return self
+
+        def rotate_zyx_self(self,ax,ay,az) :   
             mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
-            self.vec = mx @ my @ mz @ self.vec
+            my =  np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
+            mx =  np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
+            self.vec = np.dot(mz,np.dot(my,mx)) @ self.vec 
             return self
 
-        def rev_rotate_xyz_self(self,ax,ay,az):
-            mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
-            my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
-            mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
-            self.vec = mz @ my @ mx @ self.vec
-            return self
-
-        def rotate_zyx_self(self,ax,ay,az) :
-            mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
-            my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
-            mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
-            self.vec = mz @ my @ mx @ self.vec
-            return self
-
-        def rev_rotate_zyx_self(self,ax,ay,az):
+        def rev_rotate_zyx_self(self,ax,ay,az): 
             mxt =  np.array([[1,    0,                   0],
                                     [0,math.cos(ax),math.sin(ax)],
                                     [0,-math.sin(ax),math.cos(ax)]])
@@ -106,10 +100,6 @@ if not use_cpp:
                                                     [-math.sin(az),math.cos(az),0],
                                                     [0,          0,            1]])
             self.vec = np.dot(mxt,np.dot(myt,mzt)) @ self.vec
-            # mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
-            # my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
-            # mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
-            # self.vec = mx @ my @ mz @ self.vec
             return self
 
 
@@ -124,10 +114,6 @@ if not use_cpp:
                                                     [0,math.cos(ax),-math.sin(ax)],
                                                     [0,math.sin(ax),math.cos(ax)]])
             self.vec = rotate_matrix @ self.vec
-            # mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
-            # my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
-            # mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
-            # self.vec = mz @ my @ mx @ self.vec
             return self
         def rev_rotate_xyz_fix(self,ax,ay,az):
             rotate_matrix =   np.array([[1,0,0],
@@ -140,10 +126,6 @@ if not use_cpp:
                                                         [-math.sin(az),math.cos(az),0],
                                                         [0,           0,           1]])  
             self.vec = rotate_matrix @ self.vec
-            # mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
-            # my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
-            # mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
-            # self.vec = mx @ my @ mz @ self.vec
             return self
     
         def prod(self,x : float):
@@ -158,7 +140,7 @@ if not use_cpp:
             self.vec[1] += v3[1]
             self.vec[2] += v3[2]
             return self
-    
+
     ########################################################################## 
         def get_list(self):
             return [self.vec[0],self.vec[1],self.vec[2]]
@@ -170,11 +152,14 @@ if not use_cpp:
             product += self.vec[2] * v3[2]
             return product 
         def get_module(self,non_zero =False):
-            mo = self.vec[0]* self.vec[0]
-            mo += self.vec[1] * self.vec[1]
-            mo += self.vec[2] * self.vec[2]
-            if (non_zero == True and mo ==0 ) : mo = 0.0001
-            return math.sqrt(mo)
+            # mo = self.vec[0]* self.vec[0]
+            # mo += self.vec[1] * self.vec[1]
+            # mo += self.vec[2] * self.vec[2]
+            # if (non_zero == True and mo ==0 ) : mo = 0.0001
+            # return math.sqrt(mo)
+            mo = np.linalg.norm(self.vec)
+            if (non_zero == True and mo ==0 ) : mo = 1e-4
+            return mo
         def get_angle(self, v3, pid_set_zero=-1, pid_sign_dim:int=None):
             if pid_set_zero == -1:
                 dot_product = self.get_dot(v3)
@@ -284,10 +269,26 @@ if not use_cpp:
                 self.vec[index] = value
             else:
                 raise IndexError("Index out of range")
+        
+        def __str__(self):
+            """Return string representation of vector."""
+            return f"Vector3({self.vec.tolist()})"
+        
+        def __repr__(self):
+            """Return string representation of vector."""
+            return f"Vector3({self.vec.tolist()})"
+        
+        def copy(self):
+            """Return a copy of the vector."""
+            return Vector3(self.vec.tolist())
 
-
-
-
+        def normalize(self):
+            """Normalize the vector to unit length."""
+            module = self.get_module(non_zero=False)
+            if module == 0:
+                raise ValueError("Cannot normalize zero vector")
+            self.vec = self.vec / module
+            return self
 
 
 
