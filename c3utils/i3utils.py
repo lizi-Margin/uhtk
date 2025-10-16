@@ -72,23 +72,30 @@ if not use_cpp:
 
     class Vector3 :
         def __init__(self,list3) -> None:
-            self.vec = np.array(list3)
+            self.vec = np.array(list3, dtype=np.float64)
 
         def rotate_xyz_self(self,ax,ay,az):
-            rotate_matrix =  np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
-            rotate_matrix = rotate_matrix @ np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
-            rotate_matrix = rotate_matrix @ np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
-            self.vec = rotate_matrix @ self.vec
-            return self
-
-        def rotate_zyx_self(self,ax,ay,az) :   
+            mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
+            my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
             mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
-            my =  np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
-            mx =  np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
-            self.vec = np.dot(mz,np.dot(my,mx)) @ self.vec 
+            self.vec = mx @ my @ mz @ self.vec
             return self
 
-        def rev_rotate_zyx_self(self,ax,ay,az): 
+        def rev_rotate_xyz_self(self,ax,ay,az):
+            mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
+            my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
+            mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
+            self.vec = mz @ my @ mx @ self.vec
+            return self
+
+        def rotate_zyx_self(self,ax,ay,az) :
+            mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
+            my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
+            mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
+            self.vec = mz @ my @ mx @ self.vec
+            return self
+
+        def rev_rotate_zyx_self(self,ax,ay,az):
             mxt =  np.array([[1,    0,                   0],
                                     [0,math.cos(ax),math.sin(ax)],
                                     [0,-math.sin(ax),math.cos(ax)]])
@@ -99,6 +106,10 @@ if not use_cpp:
                                                     [-math.sin(az),math.cos(az),0],
                                                     [0,          0,            1]])
             self.vec = np.dot(mxt,np.dot(myt,mzt)) @ self.vec
+            # mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
+            # my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
+            # mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
+            # self.vec = mx @ my @ mz @ self.vec
             return self
 
 
@@ -113,6 +124,10 @@ if not use_cpp:
                                                     [0,math.cos(ax),-math.sin(ax)],
                                                     [0,math.sin(ax),math.cos(ax)]])
             self.vec = rotate_matrix @ self.vec
+            # mx = np.array([[1,0,0],[0,math.cos(ax),-math.sin(ax)], [0,math.sin(ax),math.cos(ax)]])
+            # my = np.array([[math.cos(ay),0,math.sin(ay)],[0,1,0],[-math.sin(ay),0,math.cos(ay)]])
+            # mz = np.array([[math.cos(az),-math.sin(az),0],[math.sin(az),math.cos(az),0],[0,0,1]])
+            # self.vec = mz @ my @ mx @ self.vec
             return self
         def rev_rotate_xyz_fix(self,ax,ay,az):
             rotate_matrix =   np.array([[1,0,0],
@@ -125,6 +140,10 @@ if not use_cpp:
                                                         [-math.sin(az),math.cos(az),0],
                                                         [0,           0,           1]])  
             self.vec = rotate_matrix @ self.vec
+            # mx = np.array([[1,0,0],[0,math.cos(-ax),-math.sin(-ax)], [0,math.sin(-ax),math.cos(-ax)]])
+            # my = np.array([[math.cos(-ay),0,math.sin(-ay)],[0,1,0],[-math.sin(-ay),0,math.cos(-ay)]])
+            # mz = np.array([[math.cos(-az),-math.sin(-az),0],[math.sin(-az),math.cos(-az),0],[0,0,1]])
+            # self.vec = mx @ my @ mz @ self.vec
             return self
     
         def prod(self,x : float):
@@ -156,42 +175,115 @@ if not use_cpp:
             mo += self.vec[2] * self.vec[2]
             if (non_zero == True and mo ==0 ) : mo = 0.0001
             return math.sqrt(mo)
-        def get_angle (self,v3,pid_set_zero=-1,pid_sign_dim:int=None):
-            if (pid_set_zero == -1 ):
-                ang =  (self.get_prod(v3))*(1/(self.get_module(non_zero=True) * v3.get_module(non_zero = True)))
-                if ang >1 :ang =1
-                if ang <-1 : ang =-1
-                return math.acos(ang) 
-            
+        def get_angle(self, v3, pid_set_zero=-1, pid_sign_dim:int=None):
+            if pid_set_zero == -1:
+                dot_product = self.get_dot(v3)
+                modules_product = self.get_module(non_zero=True) * v3.get_module(non_zero=True)
+                ang = dot_product / modules_product
+                if ang > 1.0: ang = 1.0
+                if ang < -1.0: ang = -1.0
+                return math.acos(ang)
+
             temp = Vector3(v3.get_list())
-            sig = 1
-            if (pid_set_zero == 0): 
+
+            if pid_set_zero == 0:
                 set_zero_dim = 0
-                sign_dim = 1            
-            elif ( pid_set_zero == 1):
+                sign_dim = 1
+            elif pid_set_zero == 1:
                 set_zero_dim = 1
                 sign_dim = 2
-            elif ( pid_set_zero == 2):
+            elif pid_set_zero == 2:
                 set_zero_dim = 2
                 sign_dim = 0
             else:
-                # print("pid_set_zero ERROR, return None.") 
-                return None
+                raise ValueError("Invalid pid_set_zero value")
 
-            if pid_sign_dim!= None:
-                sign_dim = pid_sign_dim 
+            if pid_sign_dim is not None:
+                if 0 <= pid_sign_dim < 3:
+                    sign_dim = pid_sign_dim
+                else:
+                    raise ValueError("Invalid pid_sign_dim value")
+
             temp.vec[set_zero_dim] = 0
 
-            ang = math.acos((self.get_prod(temp))*(1/(self.get_module(non_zero=True) * temp.get_module(non_zero= True))))
-            if (temp.vec[sign_dim]<0) : sig = -1
+            dot_product = self.get_prod(temp)
+            modules_product = self.get_module(non_zero=True) * temp.get_module(non_zero=True)
+            ang = dot_product / modules_product
+            if ang > 1.0: ang = 1.0
+            if ang < -1.0: ang = -1.0
 
-            return sig * ang
+            angle = math.acos(ang)
+            if temp.vec[sign_dim] < 0:
+                angle = -angle
 
-            
+            return angle
+
+        def get_rotate_angle_fix(self):
+            """
+            Get the Euler angles (gamma, beta, alpha) needed to rotate this vector
+            using fixed-axis rotations (Z-Y-X order).
+
+            Returns:
+                list: [gamma, beta, alpha] where:
+                    - alpha: rotation around Z-axis (yaw)
+                    - beta: rotation around Y-axis (pitch)
+                    - gamma: rotation around X-axis (roll, always 0 in this method)
+            """
+            vx = self.vec[0]
+            vy = self.vec[1]
+            vz = self.vec[2]
+
+            alpha = math.atan2(vy, vx)
+            beta = math.atan2(-vz, math.sqrt(vx*vx + vy*vy))
+            gamma = 0.0
+
+            return [gamma, beta, alpha]
+
+        def get_dot(self, v3):
+            """Compute dot product with another vector (alias for get_prod)."""
+            return self.get_prod(v3)
 
         def get_Vector2(self):
             lis = self.vec.tolist()
             return Vector2([lis[0],lis[1]])
+
+        def __add__(self, other):
+            """Add two vectors."""
+            if isinstance(other, Vector3):
+                return Vector3((self.vec + other.vec).tolist())
+            else:
+                raise TypeError("Unsupported operand type for +")
+
+        def __sub__(self, other):
+            """Subtract two vectors."""
+            if isinstance(other, Vector3):
+                return Vector3((self.vec - other.vec).tolist())
+            else:
+                raise TypeError("Unsupported operand type for -")
+
+        def __eq__(self, other):
+            """Check equality with another vector."""
+            if not isinstance(other, Vector3):
+                return False
+            if np.array_equal(self.vec, other.vec):
+                return True
+            # Use approximate equality with absolute precision
+            abs_precision = 1e-9
+            return np.allclose(self.vec, other.vec, atol=abs_precision, rtol=0)
+
+        def __getitem__(self, index):
+            """Get vector component by index."""
+            if 0 <= index < 3:
+                return self.vec[index]
+            else:
+                raise IndexError("Index out of range")
+
+        def __setitem__(self, index, value):
+            """Set vector component by index."""
+            if 0 <= index < 3:
+                self.vec[index] = value
+            else:
+                raise IndexError("Index out of range")
 
 
 
