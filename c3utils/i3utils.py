@@ -351,6 +351,19 @@ def self_to_NEU(body: List[float], roll: float, pitch: float, yaw: float) -> Lis
     vec[2] = -vec[2]
     return vec
 
+def NWU_to_self(nwu: Union[List[float], np.ndarray], roll: float, pitch: float, yaw: float) -> List[float]:
+    vec = Vector3(nwu)
+    vec.rev_rotate_zyx_self(roll, pitch, yaw)
+    vec = vec.get_list()
+    return vec
+
+
+def self_to_NWU(body: List[float], roll: float, pitch: float, yaw: float) -> List[float]:
+    vec = Vector3(body)
+    vec.rotate_zyx_self(roll, pitch, yaw)
+    vec = vec.get_list()
+    return vec
+
 def NEU_to_LLA_(north: float, east: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
     # Earth radius
     R = 6371000.0  # meters
@@ -362,6 +375,13 @@ def NEU_to_LLA_(north: float, east: float, up: float, lon_ref: float, lat_ref: f
 
 def NEU_to_LLA(neu: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
     lon, lat, alt = NEU_to_LLA_(neu[0], neu[1], neu[2], LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
+    return np.array([lon, lat, alt])
+
+def NWU_to_LLA_(north: float, west: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
+    return NEU_to_LLA_(north, -west, up, lon_ref, lat_ref, alt_ref)
+
+def NWU_to_LLA(nwu: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
+    lon, lat, alt = NWU_to_LLA_(nwu[0], nwu[1], nwu[2], LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
     return np.array([lon, lat, alt])
 
 # def velocity_to_euler_NEU(velocity: np.ndarray) -> Tuple[float, float, float]:
@@ -399,6 +419,11 @@ def velocity_to_euler_NEU(velocity: np.ndarray) -> Tuple[float, float, float]:
     g, b, a = vel_vec.get_rotate_angle_fix()
     return g, -b, a  # NEU!!!!!!!
 
+def velocity_to_euler_NWU(velocity: np.ndarray) -> Tuple[float, float, float]:
+    if isinstance(velocity, np.ndarray):
+        vel_vec = Vector3(velocity)
+    g, b, a = vel_vec.get_rotate_angle_fix()
+    return g, b, a 
 
 ######################################
 ## misc
