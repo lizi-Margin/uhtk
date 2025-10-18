@@ -524,6 +524,12 @@ def mach_to_mps(mach: float, temperature_C: float) -> float:
 def get_mps(mach: float, altitude: float) -> float:
     return mach_to_mps(mach, estimate_temperature_C(altitude))
 
+def get_mach(mps: float, altitude: float) -> float:
+    temperature_C = estimate_temperature_C(altitude)
+    temperature_K = C_to_K(temperature_C)
+    local_ss = math.sqrt(GAMMA * R * temperature_K)
+    return mps / local_ss
+
 def calculate_atmospheric_properties(altitude_m: float) -> dict:
     temperature_K = C_to_K(estimate_temperature_C(altitude_m))
     if altitude_m < TROPOPAUSE_ALT:
