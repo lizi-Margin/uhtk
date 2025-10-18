@@ -498,6 +498,7 @@ def norm_pi(angle: float) -> float:
     while angle < -math.pi:
         angle += 2 * math.pi
     return angle
+    # return (angle + np.pi) % (2.0 * np.pi) - np.pi
 
 def meters_to_feet(meters):
     return meters * 3.28084
