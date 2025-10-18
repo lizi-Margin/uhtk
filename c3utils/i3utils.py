@@ -397,6 +397,7 @@ def velocity_to_euler_NEU(velocity: np.ndarray) -> Tuple[float, float, float]:
     if isinstance(velocity, np.ndarray):
         vel_vec = Vector3(velocity)
     g, b, a = vel_vec.get_rotate_angle_fix()
+    print(g,b,a)
     return g, -b, a  # NEU!!!!!!!
 
 
