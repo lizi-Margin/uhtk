@@ -120,7 +120,7 @@ class DL2D(ActionDiscretizer):
         return indices
 
 
-class MD2D(ActionDiscretizer): 
+class MD2D(ActionDiscretizer):
     @staticmethod
     def get_n_actions(space: gym.Space) -> int:
         assert is_MultiDiscrete(space)
@@ -131,10 +131,21 @@ class MD2D(ActionDiscretizer):
         self.md = md
         self.nvec = md.nvec
         self.n_actions = MD2D.get_n_actions(md)
-    
+
     def index_to_action(self, index):
         indices = np.array(np.unravel_index(int(index), self.nvec), dtype=self.md.dtype)
         return indices
+
+    def action_to_index(self, action):
+        # NOT TESTED
+        if isinstance(action, list):
+            action = np.array(action)
+        assert isinstance(action, np.ndarray), f"action must be numpy array, got {type(action)}"
+        assert action.shape == self.nvec.shape, f"action shape {action.shape} != nvec shape {self.nvec.shape}"
+
+        # Convert multi-dimensional indices to single flat index
+        index = np.ravel_multi_index(action.astype(int), self.nvec)
+        return int(index)
 
 class Box2D(ActionDiscretizer):
     @staticmethod

@@ -67,7 +67,10 @@ def print_dict(data ):
                                                                          else type(value) 
                                                                          for key, value in data.items()
     }
-    pprint.pp(summary, indent=1 )
+    # try:
+    pprint.pprint(summary, indent=1)
+    # except:  ## if python < 3.10
+    #     print(summary)
 
 
 def print_list(data):

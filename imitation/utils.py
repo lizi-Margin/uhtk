@@ -211,7 +211,21 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
         else:
             traj_dir = f"{cfg.logdir}/Default/{time.strftime('%Y%m%d-%H:%M:%S')}/"
     
-    for index, traj in enumerate(traj_pool):
+    
+    os.makedirs(traj_dir, exist_ok=True)
+    all_files_existing = [f for f in os.listdir(traj_dir) if (f.endswith(".d") and f.startswith(f"traj-{pool_name}-"))]
+    try:
+        # extract index from existing files
+        existing_indexs = [int(f.split(f"traj-{pool_name}-")[1].split(".d")[0]) for f in all_files_existing]
+        existing_indexs.sort()
+        max_index = max(existing_indexs) if len(existing_indexs) > 0 else -1
+        index_start = max_index + 1
+    except:
+        print_bold_red(f"Warning: failed to extract index from existing files, start from 0")
+        index_start = 0
+        
+    for i, traj in enumerate(traj_pool):
+        index = i + index_start
         traj_name = f"traj-{pool_name}-{index}.d"
         safe_dump(obj=traj, path=f"{traj_dir}/{traj_name}")
     
@@ -222,11 +236,11 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     # os.symlink(os.path.abspath(traj_dir), os.path.abspath(default_traj_dir))
 
 class safe_load_traj_pool:
-    def __init__(self, max_len=None, traj_dir="traj_pool_safe"):
+    def __init__(self, max_len=None, traj_dir="traj_pool_safe", logdir='./'):
         if isinstance(traj_dir, str): traj_dir = [traj_dir]
         self.traj_names = []
         for i in range(len(traj_dir)):
-            traj_dir[i] = f"{cfg.logdir}/{traj_dir[i]}/"
+            traj_dir[i] = f"{logdir}/{traj_dir[i]}/"
             for traj_name in os.listdir(traj_dir[i]):
                 self.traj_names.append(f"{traj_dir[i]}/{traj_name}")
             
