@@ -125,8 +125,6 @@ def load_compressed_FRAMEs(path, FRAMEs_name):
 
 NPY_special_key = 'npy_filenames'
 FRAME_special_key = 'FRAMEs_filenames'
-BUNDLED_ARRAY_KEY = '__npz_bundle__'
-BUNDLED_KEYS_KEY = '__npz_keys__'
 
 def safe_dump(obj, path):
     if not os.path.exists(path): os.makedirs(path)
@@ -149,16 +147,12 @@ def safe_dump(obj, path):
     assert not NPY_special_key in serializable_data
     assert not FRAME_special_key in serializable_data
 
-    if numpy_arrays:
-        bundle_filename = f"{cls_name}_arrays.npz"
-        # consolidate arrays into single archive to reduce tiny-file overhead
-        np.savez_compressed(os.path.join(path, bundle_filename), **numpy_arrays)
-        serializable_data[NPY_special_key] = {
-            BUNDLED_ARRAY_KEY: bundle_filename,
-            BUNDLED_KEYS_KEY: list(numpy_arrays.keys()),
-        }
-    else:
-        serializable_data[NPY_special_key] = {}
+    npy_filenames = {}
+    for key, array in numpy_arrays.items():
+        npy_filename = f"{cls_name}_{key}.npy"
+        np.save(f"{path}/{npy_filename}", array, allow_pickle=True)
+        npy_filenames[key] = npy_filename
+    serializable_data[NPY_special_key] = npy_filenames
 
     FRAMEs_filenames = {}
     for key, frame in FRAMEs.items():
@@ -205,28 +199,15 @@ def safe_load(obj, path):
     assert isinstance(serializable_data, dict)
 
     npy_filenames = serializable_data.pop(NPY_special_key)
-    if (
-        isinstance(npy_filenames, dict)
-        and BUNDLED_ARRAY_KEY in npy_filenames
-        and npy_filenames[BUNDLED_ARRAY_KEY] is not None
-    ):
-        bundle_filename = npy_filenames[BUNDLED_ARRAY_KEY]
-        bundle_path = os.path.join(path, bundle_filename)
-        bundle_keys = npy_filenames.get(BUNDLED_KEYS_KEY)
-        with np.load(bundle_path, allow_pickle=True, mmap_mode='r') as bundle:
-            keys_to_load = bundle_keys or bundle.files
-            for key in keys_to_load:
-                numpy_arrays[key] = bundle[key]
-    else:
-        for key, npy_filename in npy_filenames.items():
-            numpy_arrays[key] = np.load(f"{path}/{npy_filename}", allow_pickle=True, mmap_mode='r')
+    for key, npy_filename in npy_filenames.items():
+        numpy_arrays[key] = np.load(f"{path}/{npy_filename}", allow_pickle=True)
 
-            if has_old_dataset_name(path):
-                if key == "mouse":
-                    print亮黄(f"[safe_load] warning: {path} has old dataset signiture, load key={key} in legacy mode")
-                    print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processing")
-                    numpy_arrays[key] = numpy_arrays[key] / 2
-                    print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processed")
+        if has_old_dataset_name(path):
+            if key == "mouse":
+                print亮黄(f"[safe_load] warning: {path} has old dataset signiture, load key={key} in legacy mode")
+                print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processing")
+                numpy_arrays[key] = numpy_arrays[key] / 2
+                print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processed")
 
 
     if FRAME_special_key in serializable_data:
