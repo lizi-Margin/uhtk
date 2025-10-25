@@ -26,7 +26,9 @@ class cfg:
     else:
         logdir = '../HMP_IL/'
 
-
+def _is_traj(traj_name: str) -> bool:
+    traj_name = os.path.basename(traj_name)
+    return traj_name.endswith(".d") and traj_name.startswith("traj-")
 
 ##############################################################################################################
 
@@ -127,6 +129,7 @@ NPY_special_key = 'npy_filenames'
 FRAME_special_key = 'FRAMEs_filenames'
 BUNDLED_ARRAY_KEY = '__npz_bundle__'
 BUNDLED_KEYS_KEY = '__npz_keys__'
+MANIFEST_FILENAME = ".traj_manifest.json"
 
 def safe_dump(obj, path):
     if not os.path.exists(path): os.makedirs(path)
@@ -198,7 +201,7 @@ def safe_load(obj, path):
         with open(f"{path}/{cls_name}.json", 'r') as f:
             serializable_data = json.load(f)
     except json.decoder.JSONDecodeError:
-        print亮黄(f"Warning: {path}/{cls_name}.json is broken, skip loading")
+        # print亮黄(f"Warning: {path}/{cls_name}.json is broken, skip loading")
         with open(f"./rm_broken_traj.sh", 'a') as f:
             f.write(f"rm -r '{path}'\n")
         return None
@@ -218,16 +221,46 @@ def safe_load(obj, path):
             for key in keys_to_load:
                 numpy_arrays[key] = bundle[key]
     else:
+        legacy_arrays = {}
+        legacy_file_paths = {}
         for key, npy_filename in npy_filenames.items():
-            numpy_arrays[key] = np.load(f"{path}/{npy_filename}", allow_pickle=True, mmap_mode='r')
+            file_path = os.path.join(path, npy_filename)
+            arr = np.load(file_path, allow_pickle=True)
+            numpy_arrays[key] = arr
+            legacy_arrays[key] = np.asarray(arr)
+            legacy_file_paths[key] = file_path
 
             if has_old_dataset_name(path):
                 if key == "mouse":
                     print亮黄(f"[safe_load] warning: {path} has old dataset signiture, load key={key} in legacy mode")
                     print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processing")
                     numpy_arrays[key] = numpy_arrays[key] / 2
+                    legacy_arrays[key] = np.asarray(numpy_arrays[key])
                     print亮黄(f"[safe_load] key={key}, shape={numpy_arrays[key].shape}, max={np.max(numpy_arrays[key])}, min={np.min(numpy_arrays[key])}, processed")
 
+        if legacy_arrays:
+            bundle_filename = f"{cls_name}_arrays.npz"
+            bundle_path = os.path.join(path, bundle_filename)
+            try:
+                np.savez_compressed(bundle_path, **legacy_arrays)
+                metadata_for_write = dict(serializable_data)
+                metadata_for_write[NPY_special_key] = {
+                    BUNDLED_ARRAY_KEY: bundle_filename,
+                    BUNDLED_KEYS_KEY: list(legacy_arrays.keys()),
+                }
+                _rewrite_traj_metadata(path, cls_name, metadata_for_write)
+
+                with np.load(bundle_path, allow_pickle=True, mmap_mode='r') as bundle:
+                    for key in legacy_arrays.keys():
+                        numpy_arrays[key] = bundle[key]
+                for file_path in legacy_file_paths.values():
+                    try:
+                        os.remove(file_path)
+                    except OSError as e:
+                        print亮黄(f"[safe_load] failed to remove legacy file {file_path}: {e}")
+            except Exception as e:
+                print亮黄(f"[safe_load] failed to auto-convert legacy arrays at {path}: {e}")
+            # print_blue(f"converted legacy arrays at {path}")
 
     if FRAME_special_key in serializable_data:
         FRAMEs_filenames = serializable_data.pop(FRAME_special_key)
@@ -239,6 +272,13 @@ def safe_load(obj, path):
     
     return obj
 
+def _rewrite_traj_metadata(path: str, cls_name: str, metadata: dict):
+    json_path = os.path.join(path, f"{cls_name}.json")
+    try:
+        with open(json_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+    except Exception as e:
+        print亮黄(f"[safe_load] failed to update metadata {json_path}: {e}")
 ##############################################################################################################
 
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
@@ -256,7 +296,7 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     
     
     os.makedirs(traj_dir, exist_ok=True)
-    all_files_existing = [f for f in os.listdir(traj_dir) if (f.endswith(".d") and f.startswith(f"traj-"))]
+    all_files_existing = [f for f in os.listdir(traj_dir) if _is_traj(f)]
     try:
         # extract index from existing files
         # existing_indexs = [int(f.split(f"traj-{pool_name}-")[1].split(".d")[0]) for f in all_files_existing]
@@ -282,6 +322,37 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     #     os.unlink(default_traj_dir[:-1])
     # os.symlink(os.path.abspath(traj_dir), os.path.abspath(default_traj_dir))
 
+###############################################################################################
+# # cache
+# def _manifest_path(dir_path: str) -> str:
+#     return os.path.join(dir_path, MANIFEST_FILENAME)
+
+# def _load_dir_manifest(dir_path: str):
+#     manifest_path = _manifest_path(dir_path)
+#     if not os.path.exists(manifest_path):
+#         return None
+#     try:
+#         with open(manifest_path, "r") as f:
+#             data = json.load(f)
+#         return data
+#     except Exception as e:
+#         print黄(f"[safe_load_traj_pool] manifest at {manifest_path} broken ({e}), rebuilding")
+#         return None
+
+# def _save_dir_manifest(dir_path: str, traj_names):
+#     manifest_path = _manifest_path(dir_path)
+#     data = {
+#         "dir_mtime": os.path.getmtime(dir_path),
+#         "traj_names": traj_names,
+#     }
+#     try:
+#         with open(manifest_path, "w") as f:
+#             json.dump(data, f)
+#     except Exception as e:
+#         print亮黄(f"[safe_load_traj_pool] failed to write manifest {manifest_path}: {e}")
+
+###############################################################################################
+
 class safe_load_traj_pool:
     def __init__(self, max_len=None, traj_dir="traj_pool_safe", logdir='./', verbose=False):
         self.verbose = verbose
@@ -289,9 +360,24 @@ class safe_load_traj_pool:
         self.traj_names = []
         for i in range(len(traj_dir)):
             traj_dir[i] = f"{logdir}/{traj_dir[i]}/"
-            for traj_name in os.listdir(traj_dir[i]):
-                self.traj_names.append(f"{traj_dir[i]}/{traj_name}")
-        
+            dir_path = traj_dir[i]
+            # manifest = _load_dir_manifest(dir_path)
+            # need_rebuild = True
+            # if manifest:
+            #     recorded_mtime = manifest.get("dir_mtime", -1)
+            #     if abs(recorded_mtime - os.path.getmtime(dir_path)) < 1e-3:
+            #         traj_entries = manifest.get("traj_names", [])
+            #         if traj_entries:
+            #             self.traj_names.extend([os.path.join(dir_path, name) for name in traj_entries])
+            #             need_rebuild = False
+            # if need_rebuild:
+            #     traj_entries = [name for name in os.listdir(dir_path) if _is_traj(name)]
+            #     self.traj_names.extend([os.path.join(dir_path, name) for name in traj_entries])
+            #     _save_dir_manifest(dir_path, traj_entries)
+
+            traj_entries = [name for name in os.listdir(dir_path) if _is_traj(name)]
+            self.traj_names.extend([os.path.join(dir_path, name) for name in traj_entries])
+
         self.lock = threading.Lock()  # 🔒
             
         self.used_traj_names = []
@@ -339,7 +425,7 @@ class safe_load_traj_pool:
         for i, path_to_traj in enumerate(traj_names):
             traj_name = os.path.basename(path_to_traj)
             # traj_dir = os.path.dirname(path_to_traj)
-            if traj_name.startswith(f"traj-{pool_name}"):
+            if _is_traj(traj_name):
                 if self.verbose: print(path_to_traj)
 
                 traj = safe_load(
@@ -353,7 +439,7 @@ class safe_load_traj_pool:
             else:
                 print亮红(lprint_(self, f"ERROR: traj_name invalid: {path_to_traj}"))
         
-        print(f"safe loaded {len(traj_pool)} trajs")
+        # print(f"safe loaded {len(traj_pool)} trajs")
         return traj_pool
 
 ##############################################################################################################
