@@ -2,6 +2,7 @@ import os,time,cv2,copy,re,uuid
 import threading
 import json
 import numpy as np
+import tqdm
 from random import sample
 from uhtk.UTIL.colorful import *
 from uhtk.siri.utils.lprint import lprint, lprint_
@@ -354,7 +355,15 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
 ###############################################################################################
 
 class safe_load_traj_pool:
-    def __init__(self, max_len=None, traj_dir="traj_pool_safe", logdir='./', verbose=False):
+    def __init__(self,
+        max_len=None,
+        traj_dir="traj_pool_safe",
+        logdir='./',
+        verbose=False,
+        use_cache=True,
+        preload_cache=True,
+        preload_cache_percent=0.25,
+    ):
         self.verbose = verbose
         if isinstance(traj_dir, str): traj_dir = [traj_dir]
         self.traj_names = []
@@ -378,7 +387,7 @@ class safe_load_traj_pool:
             traj_entries = [name for name in os.listdir(dir_path) if _is_traj(name)]
             self.traj_names.extend([os.path.join(dir_path, name) for name in traj_entries])
 
-        self.lock = threading.Lock()  # 🔒
+        # self.lock = threading.Lock()  # 🔒
             
         self.used_traj_names = []
         self.n_full_data_used = 0
@@ -386,54 +395,140 @@ class safe_load_traj_pool:
             assert max_len > 0
             if max_len < len(self.traj_names):
                 self.traj_names = self.traj_names[:max_len]
+        
+        self.use_cache = use_cache
+        self._traj_cache = {}
+        if preload_cache and use_cache:
+            self._load_cache()
+            old_cache_size = len(self._traj_cache)
+
+            trajs_altered = False
+            self._load_dataset(preload_cache_percent)
+            new_names_set = set(self.traj_names)
+            names_to_delete = []
+            for k, o in self._traj_cache.items():
+                if not k in new_names_set:
+                    trajs_altered =True
+                    print_yellow(f"[safe_load_traj_pool] preload cache: {k} not found in self.traj_names, deleted")
+                    names_to_delete.append(k)
+            for k in names_to_delete:
+                del self._traj_cache[k]
+
+            # if not os.path.exists(self._cache_path()):
+            if trajs_altered or old_cache_size < len(self._traj_cache):
+                self.save_cache()
+    
+    def _load_dataset(self, percent):
+        try:
+            traj_names = self.traj_names.copy()
+            traj_names = traj_names[:int(len(traj_names) * percent)]
+            return self._load(traj_names=traj_names, use_tqdm=True)
+        except KeyboardInterrupt:
+            print(f"[safe_load_traj_pool] load dataset interrupted by user")
+    
+    def _cache_path(self):
+        user_path = os.path.expanduser("~")
+        cwd_path = os.getcwd()
+        cache_dir = os.path.join(cwd_path, ".uhtk", "safe_load_traj_pool")
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, "_traj_cache.pkl")
+        return cache_path
+    
+    def save_cache(self):
+        import pickle
+        # /home/user/.uhtk/safe_load_traj_pool
+        cache_path = self._cache_path()
+        with open(cache_path, "wb") as f:
+            print(f"[safe_load_traj_pool] cache size: {len(self._traj_cache)}")
+            print(f"[safe_load_traj_pool] saving cache to {cache_path}...")
+            pickle.dump(self._traj_cache, f)
+            print(f"[safe_load_traj_pool] cache file size: {os.path.getsize(cache_path)}")
+    
+    def _load_cache(self):
+        import pickle
+        # /home/user/.uhtk/safe_load_traj_pool
+        cache_path = self._cache_path()
+        if os.path.exists(cache_path):
+            # print the cache file size
+            print(f"[safe_load_traj_pool] cache file size: {os.path.getsize(cache_path)}")
+            with open(cache_path, "rb") as f:
+                print(f"[safe_load_traj_pool] loading cache from {cache_path}...")
+                self._traj_cache = pickle.load(f)
     
     def __call__(self, pool_name='', n_samples=200):
+        if len(self.traj_names) > n_samples:
+            n_samples = max(n_samples, 1)
+
+            # with self.lock:  # 🔒
+            if len(self.used_traj_names) > (len(self.traj_names) - n_samples):
+                self.used_traj_names = []
+                self.n_full_data_used += 1
+
+            # traj_names_to_sample = copy.copy(self.traj_names)
+            # for traj in self.used_traj_names:
+            #     ## this is TOO expensive
+            #     # if traj not in traj_names_to_sample: print亮红(lprint_(self, f"ERROR: {traj} not found in self.traj_names !!!"))
+            #     # else: traj_names_to_sample.remove(traj)
+            #     traj_names_to_sample.remove(traj)
+            used_set = set(self.used_traj_names)
+            traj_names_to_sample = [t for t in self.traj_names if t not in used_set]
+                    
+
+            # traj_names = sample(traj_names_to_sample, n_samples)
+            traj_names_to_sample_np = np.array(traj_names_to_sample)
+            sample_idx = np.random.choice(len(traj_names_to_sample_np), size=n_samples, replace=False)
+            traj_names = traj_names_to_sample_np[sample_idx].tolist()
+
+            self.used_traj_names.extend(traj_names)
+
+            # if self.verbose:
+            #     plt = ["o"] * len(self.traj_names)
+            #     for traj in self.used_traj_names:
+            #         index = self.traj_names.index(traj)
+            #         plt[index] = "x"
+            #     print("".join(plt))
+            if self.verbose:
+                index_map = {t: i for i, t in enumerate(self.traj_names)}  # O(N)
+                plt = ["o"] * len(self.traj_names)
+                for traj in self.used_traj_names:
+                    if traj in index_map:
+                        plt[index_map[traj]] = "x"
+                print("".join(plt))
+
+            print(f"Load Plan: sampled \033[0;36m{len(self.used_traj_names)}/{len(self.traj_names)}\033[0m trajs this turn, turn=\033[0;36m{self.n_full_data_used}\033[0m")
+        else:
+            self.used_traj_names = []
+            traj_names = self.traj_names
+            if self.verbose: print("x" * len(self.traj_names))
+        traj_pool = self._load(traj_names, use_tqdm=False)
+        return traj_pool
+    
+    def _load(self, traj_names, use_tqdm=True):
         from .traj import trajectory
         traj_pool = []
-        with self.lock:  # 🔒
-            if len(self.traj_names) > n_samples:
-                n_samples = max(n_samples, 1)
 
-                if len(self.used_traj_names) > (len(self.traj_names) - n_samples):
-                    self.used_traj_names = []
-                    self.n_full_data_used += 1
-
-                traj_names_to_sample = copy.copy(self.traj_names)
-                for traj in self.used_traj_names:
-                    if traj not in traj_names_to_sample: print亮红(lprint_(self, f"ERROR: {traj} not found in self.traj_names !!!"))
-                    else: traj_names_to_sample.remove(traj)
-                        
-
-                traj_names = sample(traj_names_to_sample, n_samples)
-
-                self.used_traj_names.extend(traj_names)
-
-                if self.verbose:
-                    plt = ["o"] * len(self.traj_names)
-                    for traj in self.used_traj_names:
-                        index = self.traj_names.index(traj)
-                        plt[index] = "x"
-                    print("".join(plt))
-
-                print(f"Load Plan: sampled \033[0;36m{len(self.used_traj_names)}/{len(self.traj_names)}\033[0m trajs this turn, turn=\033[0;36m{self.n_full_data_used}\033[0m")
-            else:
-                self.used_traj_names = []
-                traj_names = self.traj_names
-                if self.verbose: print("x" * len(self.traj_names))
-
+        if use_tqdm:
+            pbar = tqdm.tqdm(total=len(traj_names), desc="Loading Trajectories")
         
         for i, path_to_traj in enumerate(traj_names):
+            if use_tqdm: pbar.update(1)
             traj_name = os.path.basename(path_to_traj)
             # traj_dir = os.path.dirname(path_to_traj)
             if _is_traj(traj_name):
                 if self.verbose: print(path_to_traj)
-
-                traj = safe_load(
-                    obj=trajectory(traj_limit='auto loaded', env_id='auto loaded'),
-                    path=path_to_traj
-                )
+                if path_to_traj in self._traj_cache:
+                    traj = self._traj_cache[path_to_traj]
+                    # print_indigo("cache hit")
+                else:
+                    # print("cache miss")
+                    traj = safe_load(
+                        obj=trajectory(traj_limit='auto loaded', env_id='auto loaded'),
+                        path=path_to_traj
+                    )
+                    if self.use_cache and traj is not None:
+                        self._traj_cache[path_to_traj] = traj
                 if traj is not None:
-                    traj_pool.append(traj)
+                    traj_pool.append(traj)  
 
                 # print亮黄(f"traj loaded from file: {traj_dir}/{traj_name}")
             else:
