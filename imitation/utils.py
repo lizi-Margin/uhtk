@@ -1,4 +1,4 @@
-import os,time,cv2,copy
+import os,time,cv2,copy,re
 import json
 import numpy as np
 from random import sample
@@ -204,6 +204,11 @@ def safe_load(obj, path):
 ##############################################################################################################
 
 def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
+    if isinstance(pool_name, list):
+        assert len(pool_name) == len(traj_pool)
+    elif isinstance(pool_name, str):
+        pool_name = [pool_name] * len(traj_pool)
+    else: raise ValueError(f"pool_name must be str or list of str, but got {type(pool_name)}")
     # default_traj_dir = f"{cfg.logdir}/traj_pool_safe/"
     if traj_dir is None:
         if IS_WINDOWS:
@@ -213,20 +218,24 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     
     
     os.makedirs(traj_dir, exist_ok=True)
-    all_files_existing = [f for f in os.listdir(traj_dir) if (f.endswith(".d") and f.startswith(f"traj-{pool_name}-"))]
+    all_files_existing = [f for f in os.listdir(traj_dir) if (f.endswith(".d") and f.startswith(f"traj-"))]
     try:
         # extract index from existing files
-        existing_indexs = [int(f.split(f"traj-{pool_name}-")[1].split(".d")[0]) for f in all_files_existing]
-        existing_indexs.sort()
-        max_index = max(existing_indexs) if len(existing_indexs) > 0 else -1
-        index_start = max_index + 1
+        # existing_indexs = [int(f.split(f"traj-{pool_name}-")[1].split(".d")[0]) for f in all_files_existing]
+        res = re.findall(r"traj-[\w\-]+-(\d+).d", " ".join(all_files_existing))
+        if len(res) == 0:
+            index_start = 0
+        else:
+            existing_indexs = [int(x) for x in res]
+            max_index = max(existing_indexs) if len(existing_indexs) > 0 else -1
+            index_start = max_index + 1
     except:
         print_bold_red(f"Warning: failed to extract index from existing files, start from 0")
         index_start = 0
         
     for i, traj in enumerate(traj_pool):
         index = i + index_start
-        traj_name = f"traj-{pool_name}-{index}.d"
+        traj_name = f"traj-{pool_name[i]}-{index}.d"
         safe_dump(obj=traj, path=f"{traj_dir}/{traj_name}")
     
         print亮黄(f"traj saved in file: {traj_dir}/{traj_name}")
