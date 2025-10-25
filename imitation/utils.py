@@ -1,4 +1,4 @@
-import os,time,cv2,copy,re
+import os,time,cv2,copy,re,uuid
 import json
 import numpy as np
 from random import sample
@@ -8,13 +8,22 @@ from uhtk.siri.utils.iterable_tools import iterable_eq
 from uhtk.siri.utils.is_basic_type import is_basic_type
 from uhtk.siri.utils.video_io import dump_FRAMEs_to_video, load_FRAMEs_from_video
 
+UUID_KEY = "_UUID"
+def get_traj_uuid():
+    t_code = time.strftime('%Y%m%d%H%M%S')
+    uuid_code = uuid.uuid4().hex
+    return f"{t_code}{uuid_code}"
+
 import platform
 IS_WINDOWS = (platform.system() == 'Windows')
 USE_VIDEO_IO = True
 VIDEO_IO_COMPRESS_QUALITY = 90
 
 class cfg:
-    logdir = 'G:/HMP_IL/'
+    if IS_WINDOWS:
+        logdir = 'G:/HMP_IL/'
+    else:
+        logdir = '../HMP_IL/'
 
 
 
@@ -150,6 +159,9 @@ def safe_dump(obj, path):
         save_and_compress_FRAMEs(frame, path, FRAMEs_name)
         FRAMEs_filenames[key] = FRAMEs_name
     serializable_data[FRAME_special_key] = FRAMEs_filenames
+
+    if not UUID_KEY in serializable_data:
+        serializable_data[UUID_KEY] = get_traj_uuid()
 
     with open(f"{path}/{cls_name}.json", 'w') as f:
         json.dump(serializable_data, f, indent=2)
