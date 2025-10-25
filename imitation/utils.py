@@ -236,7 +236,8 @@ def safe_dump_traj_pool(traj_pool, pool_name, traj_dir=None):
     # os.symlink(os.path.abspath(traj_dir), os.path.abspath(default_traj_dir))
 
 class safe_load_traj_pool:
-    def __init__(self, max_len=None, traj_dir="traj_pool_safe", logdir='./'):
+    def __init__(self, max_len=None, traj_dir="traj_pool_safe", logdir='./', verbose=False):
+        self.verbose = verbose
         if isinstance(traj_dir, str): traj_dir = [traj_dir]
         self.traj_names = []
         for i in range(len(traj_dir)):
@@ -268,22 +269,24 @@ class safe_load_traj_pool:
             traj_names = sample(traj_names_to_sample, n_samples)
 
             self.used_traj_names.extend(traj_names)
-            plt = ["o"] * len(self.traj_names)
-            for traj in self.used_traj_names:
-                index = self.traj_names.index(traj)
-                plt[index] = "x"
-            print("".join(plt))
+
+            if self.verbose:
+                plt = ["o"] * len(self.traj_names)
+                for traj in self.used_traj_names:
+                    index = self.traj_names.index(traj)
+                    plt[index] = "x"
+                print("".join(plt))
         else:
             self.used_traj_names = []
             traj_names = self.traj_names
-            print("x" * len(self.traj_names))
+            if self.verbose: print("x" * len(self.traj_names))
 
         
         for i, path_to_traj in enumerate(traj_names):
             traj_name = os.path.basename(path_to_traj)
             # traj_dir = os.path.dirname(path_to_traj)
             if traj_name.startswith(f"traj-{pool_name}"):
-                print(path_to_traj)
+                if self.verbose: print(path_to_traj)
 
                 traj = safe_load(
                     obj=trajectory(traj_limit='auto loaded', env_id='auto loaded'),
