@@ -246,6 +246,7 @@ class safe_load_traj_pool:
                 self.traj_names.append(f"{traj_dir[i]}/{traj_name}")
             
         self.used_traj_names = []
+        self.n_full_data_used = 0
         if max_len is not None:
             assert max_len > 0
             if max_len < len(self.traj_names):
@@ -259,6 +260,7 @@ class safe_load_traj_pool:
 
             if len(self.used_traj_names) > (len(self.traj_names) - n_samples):
                 self.used_traj_names = []
+                self.n_full_data_used += 1
 
             traj_names_to_sample = copy.copy(self.traj_names)
             for traj in self.used_traj_names:
@@ -298,7 +300,7 @@ class safe_load_traj_pool:
             else:
                 print亮红(lprint_(self, f"ERROR: traj_name invalid: {path_to_traj}"))
         
-        print(f"safe loaded {len(traj_pool)} trajs")
+        print(f"safe loaded {len(traj_pool)} trajs, already sampled \033[0;36m{len(self.used_traj_names)}/{len(self.traj_names)}\033[0m trajs this turn, turn=\033[0;36m{self.n_full_data_used}\033[0m")
         return traj_pool
 
 ##############################################################################################################

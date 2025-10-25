@@ -91,7 +91,7 @@ class TrajPoolSampler():
         self.traj_lengths = np.array([traj.traj_length for traj in traj_pool], dtype=np.int32)
         self.max_traj_length = int(self.traj_lengths.max())
 
-        print亮绿(f'[TrajPoolSampler] Using sequence sampling: {self.n_traj} trajs, max_len={self.max_traj_length}')
+        print(f'[TrajPoolSampler] Using sequence sampling: {self.n_traj} trajs, max_len={self.max_traj_length}')
 
         # Create mask for valid timesteps: (n_traj, max_len)
         self.traj_mask = np.zeros((self.n_traj, self.max_traj_length), dtype=np.float32)
