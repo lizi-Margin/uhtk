@@ -384,6 +384,40 @@ def NWU_to_LLA(nwu: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
     lon, lat, alt = NWU_to_LLA_(nwu[0], nwu[1], nwu[2], LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
     return np.array([lon, lat, alt])
 
+def LLA_to_NWU_(lon: float, lat: float, alt: float,
+                lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
+    R = 6371000.0  # meters
+
+    # Convert degree differences to radians
+    dlat = (lat - lat_ref) * np.pi / 180.0
+    dlon = (lon - lon_ref) * np.pi / 180.0
+
+    # North displacement (positive north)
+    north = dlat * R
+
+    # West displacement (positive west, opposite of east)
+    west = -dlon * R * np.cos(lat_ref * np.pi / 180.0)
+
+    # Up displacement
+    up = alt - alt_ref
+
+    return north, west, up
+
+def LLA_to_NWU(lla: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
+    north, west, up = LLA_to_NWU_(lla[0], lla[1], lla[2],
+                                  LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
+    return np.array([north, west, up])
+
+def _check_LLA_to_NWU():
+    # original NWU
+    nwu0 = np.array([100.0, 50.0, 20.0])
+    ref  = np.array([120.0, 30.0, 100.0])  # lon, lat, alt
+
+    lla = NWU_to_LLA(nwu0, ref)
+    nwu1 = LLA_to_NWU(lla, ref)
+
+    print(nwu0, nwu1)   # should match (within floating precision)
+
 # def velocity_to_euler_NEU(velocity: np.ndarray) -> Tuple[float, float, float]:
 #     """
 #     Convert velocity vector to Euler angles (roll, pitch, yaw)
