@@ -79,7 +79,7 @@ if not use_cpp:
 
     class Vector3 :
         def __init__(self,list3) -> None:
-            assert len(list3) == 3
+            assert len(list3) == 3, f"Vector3 must have 3 elements, got {len(list3)}: {list3}"
             if isinstance(list3, Vector3):
                 self.vec = np.array(list3.vec)
             elif isinstance(list3, list):
@@ -244,6 +244,9 @@ if not use_cpp:
         def get_Vector2(self):
             lis = self.vec.tolist()
             return Vector2([lis[0],lis[1]])
+        
+        def __len__(self):
+            return len(self.vec)
 
         def __add__(self, other):
             """Add two vectors."""
