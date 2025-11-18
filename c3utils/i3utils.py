@@ -80,7 +80,8 @@ if not use_cpp:
     class Vector3 :
         def __init__(self,list3) -> None:
             assert len(list3) == 3, f"Vector3 must have 3 elements, got {len(list3)}: {list3}"
-            if isinstance(list3, Vector3):
+            if hasattr(list3, 'vec') and isinstance(list3.vec, np.ndarray):
+                assert len(list3.vec) == 3, f"Vector3 must have 3 elements, got {len(list3.vec)}: {list3.vec}"
                 self.vec = np.array(list3.vec)
             elif isinstance(list3, list):
                 self.vec = np.array(list3)
@@ -367,7 +368,7 @@ def self_to_NWU(body: List[float], roll: float, pitch: float, yaw: float) -> Lis
     vec = vec.get_list()
     return vec
 
-def NEU_to_LLA_(north: float, east: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
+def NEU_to_LLA_deg_lowacc(north: float, east: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
     # Earth radius
     R = 6371000.0  # meters
     # Convert north/east to lat/lon offsets
@@ -376,19 +377,11 @@ def NEU_to_LLA_(north: float, east: float, up: float, lon_ref: float, lat_ref: f
     alt = alt_ref + up
     return lon, lat, alt
 
-def NEU_to_LLA(neu: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
-    lon, lat, alt = NEU_to_LLA_(neu[0], neu[1], neu[2], LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
-    return np.array([lon, lat, alt])
+def NWU_to_LLA_deg_lowacc(north: float, west: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
+    return NEU_to_LLA_deg_lowacc(north, -west, up, lon_ref, lat_ref, alt_ref)
 
-def NWU_to_LLA_(north: float, west: float, up: float, lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
-    return NEU_to_LLA_(north, -west, up, lon_ref, lat_ref, alt_ref)
-
-def NWU_to_LLA(nwu: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
-    lon, lat, alt = NWU_to_LLA_(nwu[0], nwu[1], nwu[2], LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
-    return np.array([lon, lat, alt])
-
-def LLA_to_NWU_(lon: float, lat: float, alt: float,
-                lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
+def LLA_to_NWU_deg_lowacc(lon: float, lat: float, alt: float,
+    lon_ref: float, lat_ref: float, alt_ref: float) -> Tuple[float, float, float]:
     R = 6371000.0  # meters
 
     # Convert degree differences to radians
@@ -406,20 +399,153 @@ def LLA_to_NWU_(lon: float, lat: float, alt: float,
 
     return north, west, up
 
-def LLA_to_NWU(lla: np.ndarray, LonLatAltRef: np.ndarray) -> np.ndarray:
-    north, west, up = LLA_to_NWU_(lla[0], lla[1], lla[2],
-                                  LonLatAltRef[0], LonLatAltRef[1], LonLatAltRef[2])
-    return np.array([north, west, up])
+###############################################################
 
-def _check_LLA_to_NWU():
-    # original NWU
-    nwu0 = np.array([100.0, 50.0, 20.0])
-    ref  = np.array([120.0, 30.0, 100.0])  # lon, lat, alt
+# --------------------------
+#  ELLIPSOID CONSTANTS
+# --------------------------
+a = 6378137.0                          # WGS84 semi-major axis
+f = 1.0 / 298.257223565                # flattening
+e2 = f * (2 - f)                       # eccentricity^2
 
-    lla = NWU_to_LLA(nwu0, ref)
-    nwu1 = LLA_to_NWU(lla, ref)
 
-    print(nwu0, nwu1)   # should match (within floating precision)
+# --------------------------
+#  LLA → ECEF
+# --------------------------
+def LLA_to_ECEF(lon: float, lat: float, alt: float) -> np.ndarray:
+    N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
+
+    x = (N + alt) * np.cos(lat) * np.cos(lon)
+    y = (N + alt) * np.cos(lat) * np.sin(lon)
+    z = (N * (1 - e2) + alt) * np.sin(lat)
+
+    return np.array([x, y, z])
+
+
+# --------------------------
+#  ECEF → LLA  (ITERATIVE)
+# --------------------------
+def ECEF_to_LLA(x: float, y: float, z: float) -> Tuple[float, float, float]:
+    lon = np.arctan2(y, x)
+    p = np.sqrt(x*x + y*y)
+
+    # initial latitude
+    lat = np.arctan2(z, p * (1 - e2))
+
+    # iterative solve
+    for _ in range(10):
+        N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
+        lat = np.arctan2(z + e2 * N * np.sin(lat), p)
+
+    N = a / np.sqrt(1 - e2 * np.sin(lat)**2)
+    alt = p / np.cos(lat) - N
+
+    return lon, lat, alt
+
+
+# --------------------------
+#  NWU → LLA_ 
+# --------------------------
+def NWU_to_LLA_(north: float, west: float, up: float,
+                lon_ref: float, lat_ref: float, alt_ref: float
+                ) -> Tuple[float, float, float]:
+
+    # NWU → ENU
+    east = -west
+    north_ = north
+    up_ = up
+
+    ENU = np.array([east, north_, up_])
+
+    # reference ECEF
+    ECEF_ref = LLA_to_ECEF(lon_ref, lat_ref, alt_ref)
+
+    # ENU → ECEF rotation matrix
+    sin_lon = np.sin(lon_ref);  cos_lon = np.cos(lon_ref)
+    sin_lat = np.sin(lat_ref);  cos_lat = np.cos(lat_ref)
+
+    M = np.array([
+        [-sin_lon,                 -sin_lat * cos_lon,    cos_lat * cos_lon],
+        [ cos_lon,                 -sin_lat * sin_lon,    cos_lat * sin_lon],
+        [ 0.0,                      cos_lat,              sin_lat          ]
+    ])
+
+    dECEF = M @ ENU
+
+    ECEF_target = ECEF_ref + dECEF
+
+    return ECEF_to_LLA(*ECEF_target)
+
+
+# --------------------------
+#  NWU → LLA 
+# --------------------------
+def NWU_to_LLA_deg(north: float, west: float, up: float,
+                lon_ref: float, lat_ref: float, alt_ref: float
+                ) -> Tuple[float, float, float]:
+    lon_ref = np.deg2rad(lon_ref)
+    lat_ref = np.deg2rad(lat_ref)
+    
+    lon, lat, alt = NWU_to_LLA_(
+        north, west, up,
+        lon_ref, lat_ref, alt_ref
+    )
+    lon = np.rad2deg(lon)
+    lat = np.rad2deg(lat)
+    return lon, lat, alt
+
+# ===============  LLA → NWU  ===============
+def LLA_to_NWU_(lon: float, lat: float, alt: float,
+                lon_ref: float, lat_ref: float, alt_ref: float
+                ) -> Tuple[float, float, float]:
+    # 1. LLA → ECEF
+    ECEF_target = LLA_to_ECEF(lon, lat, alt)
+    ECEF_ref    = LLA_to_ECEF(lon_ref, lat_ref, alt_ref)
+
+    dECEF = ECEF_target - ECEF_ref
+
+    # 2. ECEF → ENU 
+    sin_lon = np.sin(lon_ref);  cos_lon = np.cos(lon_ref)
+    sin_lat = np.sin(lat_ref);  cos_lat = np.cos(lat_ref)
+
+    M = np.array([
+        [-sin_lon,                 cos_lon,                 0.0       ],
+        [-sin_lat * cos_lon,      -sin_lat * sin_lon,       cos_lat   ],
+        [ cos_lat * cos_lon,       cos_lat * sin_lon,       sin_lat   ]
+    ])
+
+    ENU = M @ dECEF     # (east, north, up)
+
+    # 3. ENU → NWU
+    east, north, up_ = ENU
+
+    north_nwu = north
+    west_nwu  = -east
+    up_nwu    = up_
+
+    return north_nwu, west_nwu, up_nwu
+
+def LLA_to_NWU_deg(lon: float, lat: float, alt: float,
+                lon_ref: float, lat_ref: float, alt_ref: float
+                ) -> Tuple[float, float, float]:
+    lon = np.deg2rad(lon)
+    lat = np.deg2rad(lat)
+    lon_ref = np.deg2rad(lon_ref)
+    lat_ref = np.deg2rad(lat_ref)
+
+    n, w, u = LLA_to_NWU_(lon, lat, alt, lon_ref, lat_ref, alt_ref)
+    return n, w, u
+###############################################################
+
+# def _check_LLA_to_NWU():
+#     # original NWU
+#     nwu0 = np.array([100.0, 50.0, 20.0])
+#     ref  = np.array([120.0, 30.0, 100.0])  # lon, lat, alt
+
+#     lla = NWU_to_LLA(nwu0, ref)
+#     nwu1 = LLA_to_NWU(lla, ref)
+
+#     print(nwu0, nwu1)   # should match (within floating precision)
 
 # def velocity_to_euler_NEU(velocity: np.ndarray) -> Tuple[float, float, float]:
 #     """
