@@ -83,26 +83,24 @@ class CnnDownStack(nn.Module):
 class ImpalaCNN(nn.Module):
     def __init__(
         self,
-        inshape: List[int],
+        inshape_chw: List[int],
         chans: List[int],
         outsize: int,
         nblock: int,
     ):
         super().__init__()
-        h, w, c = inshape
-        curshape = (c, h, w)
         self.stacks = nn.ModuleList()
         for i, outchan in enumerate(chans):
             stack = CnnDownStack(
-                curshape[0],
+                inshape_chw[0],
                 nblock=nblock,
                 outchan=outchan,
                 pool=True
             )
             self.stacks.append(stack)
-            curshape = stack.output_shape(curshape)
+            inshape_chw = stack.output_shape(inshape_chw)
         
-        cnnout_flatten_size = intprod(curshape)
+        cnnout_flatten_size = intprod(inshape_chw)
         if (outsize < cnnout_flatten_size) or (outsize > 2*cnnout_flatten_size):
             print黄(lprint_(self, f"Warning: mapping output size \
                             from {cnnout_flatten_size} to {outsize}."))
@@ -117,7 +115,7 @@ class ImpalaCNN(nn.Module):
     def forward(self, x: torch.Tensor):
         to_batch = x.shape[:-3]
         x = x.reshape(intprod(to_batch), *x.shape[-3:])
-        x = transpose(x, "bhwc", "bchw")
+        # x = transpose(x, "bhwc", "bchw")
         x = sequential(self.stacks, x)
         x = x.reshape(*to_batch, *x.shape[1:])
         x = flatten_last3dims(x)

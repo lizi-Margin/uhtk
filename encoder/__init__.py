@@ -1,5 +1,5 @@
 from torch import nn
-from typing import Union
+from typing import Union, Optional
 from torch.nn import functional as F
 from .impala_cnn import ImpalaCNN
 from .relu_layer import FanInInitReLULayer
@@ -36,18 +36,18 @@ class VectorObsProcess(nn.Module):
 class ImgObsProcess(nn.Module):
     def __init__(
         self,
-        imgshape_hwc: tuple = (128, 128, 3,),
+        imgshape_chw: tuple = (3, 128, 128),
         impala_chans: tuple = (16, 32, 32),
         cnn_outsize: int = 256,
         output_size: int = 512,
         pre_norm: bool = False
     ):
         super().__init__()
-        assert len(imgshape_hwc) == 3, str(imgshape_hwc)
+        assert len(imgshape_chw) == 3, str(imgshape_chw)
         self.norm = None
         if pre_norm: self.norm = ImgNorm(scale_img=True, norm_img=False)
         self.cnn = ImpalaCNN(
-            inshape=imgshape_hwc,
+            inshape_chw=imgshape_chw,
             chans=impala_chans,
             outsize=cnn_outsize,
             nblock=2
@@ -60,5 +60,4 @@ class ImgObsProcess(nn.Module):
 
     def forward(self, img):
         if self.norm: img = self.norm(img)
-        print(img.shape, img.std(), img.mean())
         return self.linear(self.cnn(img))
