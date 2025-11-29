@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from .impala_cnn import ImpalaCNN
 from .relu_layer import FanInInitReLULayer
 from .norm import DynamicNormFix, ImgNorm
+from .mlp_blocks import ResidualMLPBlock
 
 
 class DualEncoder(nn.Module):
@@ -26,11 +27,12 @@ class VectorObsProcess(nn.Module):
         if pre_dnorm:
             self.batch_norm = DynamicNormFix(input_dim, only_for_last_dim=True, exclude_one_hot=True, exclude_nan=True)
         self.obs_encoder = nn.Sequential(nn.Linear(input_dim, output_dim), nn.ReLU(inplace=True), nn.Linear(output_dim, output_dim))
+        self.mlp = ResidualMLPBlock(output_dim)
     
     def forward(self, obs, test_freeze_dnorm: bool = False):
         if self.batch_norm:
             obs = self.batch_norm.forward(obs, freeze=test_freeze_dnorm)
-        return self.obs_encoder(obs)
+        return self.mlp(self.obs_encoder(obs))
 
 
 class ImgObsProcess(nn.Module):
