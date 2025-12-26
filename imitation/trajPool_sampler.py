@@ -2,7 +2,7 @@ import math
 import numpy as np
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from uhtk.UTIL.colorful import *
-from config import GlobalConfig as cfg
+# from config import GlobalConfig as cfg
 
 class TrajPoolSampler():
     def __init__(
