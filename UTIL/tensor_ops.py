@@ -254,29 +254,59 @@ def dummy_decorator(f=None):
             return wrapper
         return actual_decorator
 
+def _2tensor(x):
+    if isinstance(x, torch.Tensor):
+        return x.to(cuda_cfg.device)
+    elif isinstance(x, np.ndarray) and x.dtype != 'object':
+        if (not cuda_cfg.use_float64) and x.dtype == np.float64:
+            x = x.astype(np.float32)
+        if cuda_cfg.use_float64 and x.dtype == np.float32:
+            x = x.astype(np.float64)
+        return torch.from_numpy(x).to(cuda_cfg.device)
+    elif isinstance(x, dict):
+        y = {}
+        for key in x:
+            y[key] = _2tensor(x[key])
+        return y
+    elif isinstance(x, (tuple, list)):
+        return type(x)([_2tensor(y) for y in x])
+    else:
+        return x
+# def _2cpu2numpy(x):
+#     return (
+#         None
+#         if x is None
+#         else x
+#         if not isinstance(x, torch.Tensor)
+#         else x.detach().cpu().numpy()
+#         if x.requires_grad
+#         else x.cpu().numpy()
+#     )
+def _2cpu2numpy(x):
+    if x is None:
+        return x
+    if isinstance(x, (tuple, list)):
+        return type(x)([_2cpu2numpy(y) for y in x])
+    # if isinstance(x, dict):
+    #     y = {}
+    #     for key in x:
+    #         y[key] = _2cpu2numpy(x[key])
+    #     return y
+    if not isinstance(x, torch.Tensor):
+        return x
+    
+    x = x.cpu()
+    if x.requires_grad:
+        x = x.detach()
+    
+    return x.numpy()
+
 """
     Function decorate, 
     Turning numpy array to torch.Tensor, then put it on the right GPU / CPU
 """
 def Args2tensor(f):
     # if not cuda_cfg.init: cuda_cfg.read_cfg()
-    def _2tensor(x):
-        if isinstance(x, torch.Tensor):
-            return x.to(cuda_cfg.device)
-        elif isinstance(x, np.ndarray):
-            if (not cuda_cfg.use_float64) and x.dtype == np.float64:
-                x = x.astype(np.float32)
-            if cuda_cfg.use_float64 and x.dtype == np.float32:
-                x = x.astype(np.float64)
-            return torch.from_numpy(x).to(cuda_cfg.device)
-        elif isinstance(x, dict):
-            y = {}
-            for key in x:
-                y[key] = _2tensor(x[key])
-            return y
-        else:
-            return x
-
     @wraps(f)
     def decorated(*args, **kwargs):
         for key in kwargs:
@@ -289,18 +319,6 @@ def Args2tensor(f):
 
 
 def Return2numpy(f):
-
-    def _2cpu2numpy(x):
-        return (
-            None
-            if x is None
-            else x
-            if not isinstance(x, torch.Tensor)
-            else x.detach().cpu().numpy()
-            if x.requires_grad
-            else x.cpu().numpy()
-        )
-
     @wraps(f)
     def decorated(*args, **kwargs):
         ret_tuple = f(*args, **kwargs)
@@ -318,54 +336,6 @@ def Return2numpy(f):
     When returning, convert all torch.Tensor to numpy array
 """
 def Args2tensor_Return2numpy(f):
-    def _2tensor(x):
-        if isinstance(x, torch.Tensor):
-            return x.to(cuda_cfg.device)
-        elif isinstance(x, np.ndarray) and x.dtype != 'object':
-            if (not cuda_cfg.use_float64) and x.dtype == np.float64:
-                x = x.astype(np.float32)
-            if cuda_cfg.use_float64 and x.dtype == np.float32:
-                x = x.astype(np.float64)
-            return torch.from_numpy(x).to(cuda_cfg.device)
-        elif isinstance(x, dict):
-            y = {}
-            for key in x:
-                y[key] = _2tensor(x[key])
-            return y
-        elif isinstance(x, (tuple, list)):
-            return type(x)([_2tensor(y) for y in x])
-        else:
-            return x
-
-    # def _2cpu2numpy(x):
-    #     return (
-    #         None
-    #         if x is None
-    #         else x
-    #         if not isinstance(x, torch.Tensor)
-    #         else x.detach().cpu().numpy()
-    #         if x.requires_grad
-    #         else x.cpu().numpy()
-    #     )
-    def _2cpu2numpy(x):
-        if x is None:
-            return x
-        if isinstance(x, (tuple, list)):
-            return type(x)([_2cpu2numpy(y) for y in x])
-        # if isinstance(x, dict):
-        #     y = {}
-        #     for key in x:
-        #         y[key] = _2cpu2numpy(x[key])
-        #     return y
-        if not isinstance(x, torch.Tensor):
-            return x
-        
-        x = x.cpu()
-        if x.requires_grad:
-            x = x.detach()
-        
-        return x.numpy()
-
     @wraps(f)
     def decorated(*args, **kwargs):
         for key in kwargs:
@@ -383,16 +353,16 @@ def Args2tensor_Return2numpy(f):
 """
 
 
-def _2cpu2numpy(x):
-    return (
-        None
-        if x is None
-        else x
-        if not isinstance(x, torch.Tensor)
-        else x.detach().cpu().numpy()
-        if x.requires_grad
-        else x.cpu().numpy()
-    )
+# def _2cpu2numpy(x):
+#     return (
+#         None
+#         if x is None
+#         else x
+#         if not isinstance(x, torch.Tensor)
+#         else x.detach().cpu().numpy()
+#         if x.requires_grad
+#         else x.cpu().numpy()
+#     )
 
 
 """
@@ -401,27 +371,27 @@ def _2cpu2numpy(x):
 """
 
 
-def _2tensor(x):
-    # if not cuda_cfg.init: cuda_cfg.read_cfg()
-    cuda_cfg_device = cuda_cfg.device if ',' not in cuda_cfg.device else 'cuda'
-    if isinstance(x, torch.Tensor):
-        return x.to(cuda_cfg_device)
-    elif isinstance(x, np.ndarray):
-        if (not cuda_cfg.use_float64) and x.dtype == np.float64:
-            x = x.astype(np.float32)
-        if cuda_cfg.use_float64 and x.dtype == np.float32:
-            x = x.astype(np.float64)
-        return torch.from_numpy(x).to(cuda_cfg_device)
-    elif isinstance(x, dict):
-        y = {}
-        for key in x:
-            y[key] = _2tensor(x[key])
-        return y
-    elif isinstance(x, torch.nn.Module):
-        x.to(cuda_cfg_device)
-        return x
-    else:
-        return x
+# def _2tensor(x):
+#     # if not cuda_cfg.init: cuda_cfg.read_cfg()
+#     cuda_cfg_device = cuda_cfg.device if ',' not in cuda_cfg.device else 'cuda'
+#     if isinstance(x, torch.Tensor):
+#         return x.to(cuda_cfg_device)
+#     elif isinstance(x, np.ndarray):
+#         if (not cuda_cfg.use_float64) and x.dtype == np.float64:
+#             x = x.astype(np.float32)
+#         if cuda_cfg.use_float64 and x.dtype == np.float32:
+#             x = x.astype(np.float64)
+#         return torch.from_numpy(x).to(cuda_cfg_device)
+#     elif isinstance(x, dict):
+#         y = {}
+#         for key in x:
+#             y[key] = _2tensor(x[key])
+#         return y
+#     elif isinstance(x, torch.nn.Module):
+#         x.to(cuda_cfg_device)
+#         return x
+#     else:
+#         return x
 
 """
     Stack an array whose elements with different len, pad empty place with with NaN
