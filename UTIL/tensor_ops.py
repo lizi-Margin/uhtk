@@ -332,19 +332,39 @@ def Args2tensor_Return2numpy(f):
             for key in x:
                 y[key] = _2tensor(x[key])
             return y
+        elif isinstance(x, (tuple, list)):
+            return type(x)([_2tensor(y) for y in x])
         else:
             return x
 
+    # def _2cpu2numpy(x):
+    #     return (
+    #         None
+    #         if x is None
+    #         else x
+    #         if not isinstance(x, torch.Tensor)
+    #         else x.detach().cpu().numpy()
+    #         if x.requires_grad
+    #         else x.cpu().numpy()
+    #     )
     def _2cpu2numpy(x):
-        return (
-            None
-            if x is None
-            else x
-            if not isinstance(x, torch.Tensor)
-            else x.detach().cpu().numpy()
-            if x.requires_grad
-            else x.cpu().numpy()
-        )
+        if x is None:
+            return x
+        if isinstance(x, (tuple, list)):
+            return type(x)([_2cpu2numpy(y) for y in x])
+        # if isinstance(x, dict):
+        #     y = {}
+        #     for key in x:
+        #         y[key] = _2cpu2numpy(x[key])
+        #     return y
+        if not isinstance(x, torch.Tensor):
+            return x
+        
+        x = x.cpu()
+        if x.requires_grad:
+            x = x.detach()
+        
+        return x.numpy()
 
     @wraps(f)
     def decorated(*args, **kwargs):
