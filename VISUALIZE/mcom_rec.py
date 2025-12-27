@@ -156,7 +156,7 @@ class rec_family(object):
     
     def get_figure_size(self, image_num, baseline = 10):
         if self.figsize_given is None:
-            expand_ratio = max((image_num - baseline)/4, 1)
+            expand_ratio = max((image_num - baseline) * 0.9, 1)
             return (12*expand_ratio, 6*expand_ratio)
         else:
             return self.figsize_given

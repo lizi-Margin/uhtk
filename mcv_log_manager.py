@@ -17,11 +17,12 @@ def get_a_logger(logdir, color='k'):
 
 
 class LogManager():
-    def __init__(self, mcv, who=None):
+    def __init__(self, mcv, who=None, enable_smooth=False):
         if who is None:
             who = '*default*'
         self.who = who
         self.mcv = mcv
+        self.enable_smooth = enable_smooth
         self.trivial_dict = {}
         self.smooth_trivial_dict = {}
 
@@ -47,7 +48,8 @@ class LogManager():
             else:
                 self.smooth_trivial_dict[key] = self.trivial_dict[key]
             self.mcv.rec(self.trivial_dict[key], key)
-            self.mcv.rec(self.smooth_trivial_dict[key], key + ' - smooth')
+            if self.enable_smooth:
+                self.mcv.rec(self.smooth_trivial_dict[key], key + ' - smooth')
         if print:
             print紫(''.join(print_buf))
 
