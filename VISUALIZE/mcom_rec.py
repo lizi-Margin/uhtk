@@ -1,4 +1,4 @@
-import os, fnmatch, matplotlib, time, copy, json
+import inspect, os, fnmatch, matplotlib, time, copy, json
 import numpy as np
 from functools import lru_cache
 # 设置matplotlib正常显示中文和负号
@@ -6,6 +6,11 @@ from functools import lru_cache
 # matplotlib.rcParams['axes.unicode_minus']=False     # 正常显示负号
 ClassicPlotFigIndex = 1
 AdvancePlotFigIndex = 2
+_PERCENTILE_MIDPOINT_KW = (
+    {'method': 'midpoint'}
+    if 'method' in inspect.signature(np.percentile).parameters
+    else {'interpolation': 'midpoint'}
+)
 class rec_family(object):
     def __init__(self, colorC=None, draw_mode='Native', image_path=None, figsize=None, smooth_level=None, rec_exclude=[], **kwargs):
         # the list of vars' name (with order), string
@@ -31,6 +36,8 @@ class rec_family(object):
         self.time_index = None
         self.smooth_level = smooth_level
         self.figsize_given = figsize
+        self.dpi = int(kwargs.get('dpi', 120))
+        self.font_size = int(kwargs.get('font_size', 9))
         self.colorC = 'k' if colorC is None else colorC
         self.Working_path = 'Testing-beta'
         self.image_num = -1
@@ -156,8 +163,9 @@ class rec_family(object):
     
     def get_figure_size(self, image_num, baseline = 10):
         if self.figsize_given is None:
-            expand_ratio = max((image_num - baseline) * 0.9, 1)
-            return (12*expand_ratio, 6*expand_ratio)
+            rows = self.get_proper_row_num(image_num)
+            cols = int(np.ceil(image_num / rows))
+            return (max(12, cols * 3.4), max(6, rows * 2.4))
         else:
             return self.figsize_given
             
@@ -224,12 +232,12 @@ class rec_family(object):
             self.plt.pause(0.01)
             return
         elif self.draw_mode == 'Img':
-            if self.classic_fig_handle is not None: 
+            if self.classic_fig_handle is not None:
                 self.classic_fig_handle.tight_layout()
-                self.classic_fig_handle.savefig(self.img_to_write)
-            if self.advance_fig_handle is not None: 
+                self.classic_fig_handle.savefig(self.img_to_write, dpi=self.dpi)
+            if self.advance_fig_handle is not None:
                 self.advance_fig_handle.tight_layout()
-                self.advance_fig_handle.savefig(self.img_to_write2)
+                self.advance_fig_handle.savefig(self.img_to_write2, dpi=self.dpi)
             return
 
     def get_proper_row_num(self, img_num_to_show):
@@ -253,7 +261,14 @@ class rec_family(object):
         if index in self.plt.get_fignums():  # already exists, stop the buzzering UserWarning
             handle = self.plt.figure(index)
         else:
-            handle = self.plt.figure(index, figsize=self.get_figure_size(num_group, baseline=6), dpi=100)
+            handle = self.plt.figure(index, figsize=self.get_figure_size(num_group, baseline=6), dpi=self.dpi)
+        self.plt.rcParams.update({
+            'axes.titlesize': self.font_size + 1,
+            'axes.labelsize': self.font_size,
+            'xtick.labelsize': max(self.font_size - 1, 1),
+            'ytick.labelsize': max(self.font_size - 1, 1),
+            'legend.fontsize': max(self.font_size - 1, 1),
+        })
 
         # solve a bug inside matplotlib
         if self.default_fig_spp is None:
@@ -409,8 +424,8 @@ class rec_family(object):
             _ydata_max_ = _ydata_.max() #max(self.line_list[index])
 
             if self.enable_percentile_clamp and len(_ydata_)>220 and self.vis_95percent:
-                _ydata_min_ = np.percentile(_ydata_, 3, interpolation='midpoint') # 3%
-                _ydata_max_ = np.percentile(_ydata_, 97, interpolation='midpoint') # 97%
+                _ydata_min_ = np.percentile(_ydata_, 3, **_PERCENTILE_MIDPOINT_KW) # 3%
+                _ydata_max_ = np.percentile(_ydata_, 97, **_PERCENTILE_MIDPOINT_KW) # 97%
 
             self.change_target_figure_lim(target_subplot, _xdata_min_, _xdata_max_, _ydata_min_, _ydata_max_)
 
